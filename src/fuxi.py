@@ -26,11 +26,11 @@ class FuXi(torch.nn.Module):
             Permute([0, 1, 3, 2]),
             torch.nn.Linear(long // 4, long)
         )
+        self.modules = nn.ModuleList([self.space_time_cube_embedding, self.u_transformer, self.fc])
 
     def forward(self, x):
         x = self.space_time_cube_embedding(x)
         x = self.u_transformer(x)
-        print(x.shape)
         return self.fc(x)
 
     def training_step(self, inputs, labels) -> torch.Tensor:
@@ -43,11 +43,12 @@ class SpaceTimeCubeEmbedding(nn.Module):
     def __init__(self, in_channels, out_channels):
         logger.info('Creating SpaceTimeCubeEmbedding layer')
         super(SpaceTimeCubeEmbedding, self).__init__()
-        self.layers = torch.nn.ModuleList(
-
-        )
         self.conv3d = nn.Conv3d(in_channels, out_channels, kernel_size=(2, 4, 4), stride=(2, 4, 4))
         self.layer_norm = nn.LayerNorm(out_channels)
+        self.layers = torch.nn.ModuleList([
+            self.conv3d,
+            self.layer_norm
+        ])
 
     def forward(self, x):
         x = x.permute(0, 2, 1, 3, 4)  # Move the channel dimension to the end for LayerNorm
@@ -82,8 +83,11 @@ class DownBlock(nn.Module):
         super(DownBlock, self).__init__()
         logger.info('Creating DownBlock Layer')
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=2, padding=1)
-
         self.residual_block = ResidualBlock(out_channels)
+        self.layers = torch.nn.ModuleList([
+            self.conv1,
+            self.residual_block
+        ])
 
     def forward(self, x):
         out = self.conv1(x)
@@ -96,17 +100,15 @@ class UpBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(UpBlock, self).__init__()
         logger.info('Creating UpBlock Layer')
-        # Scale the data size back up
         self.upsample = nn.ConvTranspose2d(
             in_channels * 2,
             in_channels,
             kernel_size=2, stride=2)
-
-        # Adjusting channels after concatenation
-        # self.adjust_channels = nn.Conv2d(in_channels * 2, out_channels, kernel_size=1)
-
-        # Residual block similar to DownBlock but with adjusted channels due to skip connection
         self.residual_block = ResidualBlock(out_channels)
+        self.layers = torch.nn.ModuleList([
+            self.upsample,
+            self.residual_block
+        ])
 
     def forward(self, x, skip_connection):
         x = torch.cat([x, skip_connection], dim=1)
@@ -134,6 +136,10 @@ class UTransformer(torch.nn.Module):
             self.attentionblock.append(block)
 
         self.upblock = UpBlock(in_channels, in_channels)
+        self.layers = torch.nn.ModuleList([
+                                              self.downblock,
+                                              self.upblock
+                                          ] + self.attentionblock)
 
     def forward(self, x):
         down = self.downblock(x)
@@ -144,5 +150,4 @@ class UTransformer(torch.nn.Module):
 
         x = torch.permute(x, (0, 3, 1, 2))
         x = self.upblock(x, down)
-        # x = torch.flatten(x, start_dim=1)
         return x

@@ -4,10 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="9e18727c-3e83-42a9-a391-75f9c878b80c" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/fuxi.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/fuxi.py" afterDir="false" />
-    </list>
+    <list default="true" id="9e18727c-3e83-42a9-a391-75f9c878b80c" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -106,7 +103,7 @@
       <option name="presentableId" value="Default" />
       <updated>1712317327439</updated>
       <workItem from="1712317329254" duration="6609000" />
-      <workItem from="1712342893856" duration="11131000" />
+      <workItem from="1712342893856" duration="11862000" />
     </task>
     <servers />
   </component>
@@ -125,6 +122,6 @@
     </option>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/DL4WeatherAndClimate$main.coverage" NAME="main Coverage Results" MODIFIED="1712348393086" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/DL4WeatherAndClimate$main.coverage" NAME="main Coverage Results" MODIFIED="1712354834386" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>
