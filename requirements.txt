@@ -3,3 +3,4 @@ torchvision
 zarr
 pandas
 jupyter
+tqdm

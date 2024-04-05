@@ -8,15 +8,13 @@ import code
 class ERA5Dataset(torch.utils.data.IterableDataset):
 
     def __init__(self, path_file, batch_size):
-
         super(ERA5Dataset, self).__init__()
 
         self.batch_size = batch_size
 
         store = zarr.DirectoryStore(path_file)
         self.sources = zarr.group(store=store)
-        self.means = torch.Tensor([260.32513, 0.00310869, 4.5872235, 0.0719164, 38704.89])
-        self.stds = torch.Tensor([25.318968, 0.0043341024, 12.403501, 8.635891, 36037.766])
+
         self.mins = torch.Tensor([193.48901, -3.3835982e-05, -65.45247, -96.98215, -6838.8906])
         self.maxs = torch.Tensor([324.80637, 0.029175894, 113.785934, 89.834595, 109541.625])
         self.max_minus_min = (self.maxs - self.mins)
