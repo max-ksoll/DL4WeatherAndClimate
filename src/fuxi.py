@@ -3,6 +3,8 @@ from torchvision.models.swin_transformer import SwinTransformerBlockV2
 from torch import nn
 import logging
 
+from torchvision.ops import Permute
+
 logger = logging.getLogger(__name__)
 
 
@@ -13,13 +15,23 @@ class FuXi(torch.nn.Module):
         self.dim = [input_var, lat, long]
         self.space_time_cube_embedding = SpaceTimeCubeEmbedding(input_var, channels)
         self.u_transformer = UTransformer(transformer_block_count, channels, heads)
-        self.fc = torch.nn.Linear(channels * (lat // 4) * (long // 4), input_var * lat * long)
+        self.fc = torch.nn.Sequential(
+            # put channel dim front
+            Permute([0, 2, 3, 1]),
+            torch.nn.Linear(channels, input_var),
+            # put lat dim front
+            Permute([0, 3, 2, 1]),
+            torch.nn.Linear(lat // 4, lat),
+            # put long dim front
+            Permute([0, 1, 3, 2]),
+            torch.nn.Linear(long // 4, long)
+        )
 
     def forward(self, x):
-        embedding = self.space_time_cube_embedding(x)
-        inner = self.u_transformer(embedding)
-        out = self.fc(inner)
-        return out.reshape([out.shape[0]] + self.dim)
+        x = self.space_time_cube_embedding(x)
+        x = self.u_transformer(x)
+        print(x.shape)
+        return self.fc(x)
 
     def training_step(self, batch) -> torch.Tensor:
         inputs, labels = batch
@@ -39,13 +51,31 @@ class SpaceTimeCubeEmbedding(nn.Module):
         self.layer_norm = nn.LayerNorm(out_channels)
 
     def forward(self, x):
-        x_permuted = x.permute(0, 2, 1, 3, 4)  # Move the channel dimension to the end for LayerNorm
-        x = self.conv3d(x_permuted)
+        x = x.permute(0, 2, 1, 3, 4)  # Move the channel dimension to the end for LayerNorm
+        x = self.conv3d(x)
         x = x.permute(0, 2, 3, 4, 1)  # Move the channel dimension to the end for LayerNorm
-        x_normalized = self.layer_norm(x)
-        x_out = x_normalized.permute(0, 1, 4, 2, 3)
-        x_out = torch.squeeze(x_out, dim=1)
-        return x_out
+        x = self.layer_norm(x)
+        x = x.permute(0, 1, 4, 2, 3)
+        x = torch.squeeze(x, dim=1)
+        return x
+
+
+class ResidualBlock(nn.Module):
+    def __init__(self, channels):
+        super(ResidualBlock, self).__init__()
+        self.layers = torch.nn.ModuleList([
+            nn.Conv2d(channels, channels, kernel_size=3, stride=1, padding=1),
+            nn.GroupNorm(2, channels),
+            nn.SiLU(),
+            nn.Conv2d(channels, channels, kernel_size=3, stride=1, padding=1),
+            nn.GroupNorm(2, channels),
+            nn.SiLU()
+        ])
+
+    def forward(self, x):
+        for layer in self.layers:
+            x = layer(x)
+        return x
 
 
 class DownBlock(nn.Module):
@@ -54,14 +84,7 @@ class DownBlock(nn.Module):
         logger.info('Creating DownBlock Layer')
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=2, padding=1)
 
-        self.residual_block = nn.Sequential(
-            nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),
-            nn.GroupNorm(2, out_channels),
-            nn.SiLU(),
-            nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),
-            nn.GroupNorm(2, out_channels),
-            nn.SiLU()
-        )
+        self.residual_block = ResidualBlock(out_channels)
 
     def forward(self, x):
         out = self.conv1(x)
@@ -77,26 +100,19 @@ class UpBlock(nn.Module):
         # Scale the data size back up
         self.upsample = nn.ConvTranspose2d(
             in_channels * 2,
-            in_channels * 2,
+            in_channels,
             kernel_size=2, stride=2)
 
         # Adjusting channels after concatenation
-        self.adjust_channels = nn.Conv2d(in_channels * 2, out_channels, kernel_size=1)
+        # self.adjust_channels = nn.Conv2d(in_channels * 2, out_channels, kernel_size=1)
 
         # Residual block similar to DownBlock but with adjusted channels due to skip connection
-        self.residual_block = nn.Sequential(
-            nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),
-            nn.GroupNorm(2, out_channels),
-            nn.SiLU(),
-            nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),
-            nn.GroupNorm(2, out_channels),
-            nn.SiLU()
-        )
+        self.residual_block = ResidualBlock(out_channels)
 
     def forward(self, x, skip_connection):
         x = torch.cat([x, skip_connection], dim=1)
         x = self.upsample(x)
-        x = self.adjust_channels(x)
+        # x = self.adjust_channels(x)
         residual = self.residual_block(x)
         x = x + residual
         return x
@@ -108,14 +124,16 @@ class UTransformer(torch.nn.Module):
         logger.info('Creating UTransformer Layer')
         self.downblock = DownBlock(in_channels, in_channels)
         window_size = [8, 8]
-        self.attentionblock = [
-            SwinTransformerBlockV2(
+        self.attentionblock = []
+        for i in range(layers):
+            block = SwinTransformerBlockV2(
                 dim=in_channels,
                 num_heads=heads,
                 window_size=window_size,
                 shift_size=[0 if i % 2 == 0 else w // 2 for w in window_size],
-            ) for i in range(layers)
-        ]
+            )
+            self.attentionblock.append(block)
+
         self.upblock = UpBlock(in_channels, in_channels)
 
     def forward(self, x):
@@ -124,7 +142,8 @@ class UTransformer(torch.nn.Module):
         x = torch.permute(x, (0, 2, 3, 1))
         for block in self.attentionblock:
             x = block(x)
+
         x = torch.permute(x, (0, 3, 1, 2))
         x = self.upblock(x, down)
-        x = torch.flatten(x, start_dim=1)
+        # x = torch.flatten(x, start_dim=1)
         return x

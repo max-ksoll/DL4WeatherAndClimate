@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 def train():
     logger.info('Using {} device'.format(device))
     logger.info('Creating Model')
-    model = FuXi(25, 128, 2, 121, 240, heads=1)
+    model = FuXi(25, 1024, 16, 121, 240, heads=4)
     logger.info('Setting Model as Train')
     model.train()
     logger.info('Put Model on Device')
