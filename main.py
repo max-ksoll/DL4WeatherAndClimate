@@ -8,6 +8,7 @@ from src.era5_dataset import ERA5Dataset
 import logging
 from tqdm import tqdm
 import dotenv
+
 dotenv.load_dotenv()
 
 device = 'cpu'
@@ -24,7 +25,7 @@ logger = logging.getLogger(__name__)
 def train():
     logger.info('Using {} device'.format(device))
     logger.info('Creating Model')
-    model = FuXi(25, 1024, 16, 121, 240, heads=4)
+    model = FuXi(25, 1024, 36, 121, 240, heads=4)
     logger.info('Setting Model as Train')
     model.train()
     logger.info('Put Model on Device')
@@ -41,7 +42,8 @@ def train():
     logger.info('Creating DataLoader')
     dl = DataLoader(ds, **loader_params, sampler=None)
     logger.info('Start training')
-    for batch in tqdm(dl):
+    pbar = tqdm(dl, desc='Initialisierung')
+    for batch in pbar:
         optimizer.zero_grad()
         inputs, labels = batch
         inputs = inputs.to(device)
@@ -49,7 +51,7 @@ def train():
         loss = model.training_step(inputs, labels)
         loss.backward()
         optimizer.step()
-        logger.info(loss)
+        pbar.set_description(f'Loss: {loss.item():.4f}')
 
 
 if __name__ == '__main__':

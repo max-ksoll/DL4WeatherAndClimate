@@ -75,7 +75,7 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
 
         if worker_info is None:
             iter_start = 1
-            iter_end = len(self)
+            iter_end = len(self) - 1
 
         else:
             # split workload
@@ -87,6 +87,6 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
                 iter_start = 1
             iter_end = int(iter_start + per_worker)
             if worker_info.id + 1 == worker_info.num_workers:
-                iter_end = int(temp)
+                iter_end = int(temp) - 1
 
         return iter_start, iter_end
