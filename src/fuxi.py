@@ -1,11 +1,20 @@
 import torch
+from torchvision.models.swin_transformer import SwinTransformerBlockV2
 from torch import nn
 
 
 class FuXi(torch.nn.Module):
-    def __init__(self, input_var, latitutdes, longitudes, channels, transformer_block_count):
-        self.layers = torch.nn.ModuleList()
-        self.layers.append(SpaceTimeCubeEmbedding(channels))
+    def __init__(self, input_var, channels, transformer_block_count, lat, long):
+        super(FuXi, self).__init__()
+        self.layers = torch.nn.ModuleList([
+            SpaceTimeCubeEmbedding(input_var, channels),
+            UTransformer(transformer_block_count, channels, input_var, 8, lat, long)
+        ])
+
+    def forward(self, x):
+        for layer in self.layers:
+            x = layer(x)
+        return x
 
     def training_step(self, batch) -> torch.Tensor:
         raise NotImplementedError()
@@ -21,11 +30,12 @@ class SpaceTimeCubeEmbedding(nn.Module):
         self.layer_norm = nn.LayerNorm(out_channels)
 
     def forward(self, x):
-        x_permuted = x.permute(1, 0, 2, 3)  # Move the channel dimension to the end for LayerNorm
+        x_permuted = x.permute(0, 2, 1, 3, 4)  # Move the channel dimension to the end for LayerNorm
         x = self.conv3d(x_permuted)
-        x = x.permute(1, 2, 3, 0)  # Move the channel dimension to the end for LayerNorm
+        x = x.permute(0, 2, 3, 4, 1)  # Move the channel dimension to the end for LayerNorm
         x_normalized = self.layer_norm(x)
-        x_out = x_normalized.permute(0, 3, 1, 2)
+        x_out = x_normalized.permute(0, 1, 4, 2, 3)
+        x_out = torch.squeeze(x_out, dim=1)
         return x_out
 
 
@@ -74,30 +84,41 @@ class UpBlock(nn.Module):
 
     def forward(self, x, skip_connection):
         x = torch.cat([x, skip_connection], dim=1)
-        print(x.shape)
         x = self.upsample(x)
-        print(x.shape)
         x = self.adjust_channels(x)
-        print(x.shape)
         residual = self.residual_block(x)
         x = x + residual
         return x
 
 
 class UTransformer(torch.nn.Module):
-    def __init__(self, layers, in_channels, out_channels):
+    def __init__(self, layers, in_channels, out_channels, heads, lat, long):
         super().__init__()
-        self.layers = torch.nn.ModuleList()
-        self.layers.append(
-            DownBlock(in_channels, in_channels)
-        )
-        for _ in range(layers):
-            self.layers.append()
-        self.layers.append(
-            UpBlock(in_channels, out_channels)
-        )
+        self.downblock = DownBlock(in_channels, in_channels)
+        window_size = [8, 8]
+        self.attentionblock = [
+            SwinTransformerBlockV2(
+                dim=in_channels,
+                num_heads=heads,
+                window_size=window_size,
+                shift_size=[0 if i % 2 == 0 else w // 2 for w in window_size],
+            ) for i in range(layers)
+        ]
+        self.upblock = UpBlock(in_channels, out_channels)
+        self.fc = torch.nn.Linear(lat//4*long//4, lat*long)
+        self.lat = lat
+        self.long = long
 
     def forward(self, x):
-        for layer in self.layers:
-            x = layer(x)
-        return
+        bs = x.shape[0]
+        down = self.downblock(x)
+        x = down
+        x = torch.permute(x, (0, 2, 3, 1))
+        for block in self.attentionblock:
+            x = block(x)
+        x = torch.permute(x, (0, 3, 1, 2))
+        x = self.upblock(x, down)
+        x = torch.flatten(x, -2, -1)
+        x = self.fc(x)
+        return torch.reshape(x, (bs, -1, self.lat, self.long))
+
