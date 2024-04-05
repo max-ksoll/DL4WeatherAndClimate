@@ -7,6 +7,9 @@ class FuXi(torch.nn.Module):
         self.layers = torch.nn.ModuleList()
         self.layers.append(SpaceTimeCubeEmbedding(channels))
 
+    def training_step(self, batch) -> torch.Tensor:
+        raise NotImplementedError()
+
 
 class SpaceTimeCubeEmbedding(nn.Module):
     def __init__(self, in_channels, out_channels):
@@ -82,8 +85,19 @@ class UpBlock(nn.Module):
 
 
 class UTransformer(torch.nn.Module):
-    def __init__(self, layers):
+    def __init__(self, layers, in_channels, out_channels):
         super().__init__()
-        self.layers = torch.nn.ModuleList([
+        self.layers = torch.nn.ModuleList()
+        self.layers.append(
+            DownBlock(in_channels, in_channels)
+        )
+        for _ in range(layers):
+            self.layers.append()
+        self.layers.append(
+            UpBlock(in_channels, out_channels)
+        )
 
-        ])
+    def forward(self, x):
+        for layer in self.layers:
+            x = layer(x)
+        return
