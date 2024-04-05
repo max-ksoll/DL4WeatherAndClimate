@@ -4,3 +4,4 @@ zarr
 pandas
 jupyter
 tqdm
+python-dotenv

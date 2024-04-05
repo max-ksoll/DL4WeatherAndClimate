@@ -7,6 +7,8 @@ from src.fuxi import FuXi
 from src.era5_dataset import ERA5Dataset
 import logging
 from tqdm import tqdm
+import dotenv
+dotenv.load_dotenv()
 
 device = 'cpu'
 if torch.cuda.is_available():
@@ -30,7 +32,7 @@ def train():
     logger.info('Creating Optimizer')
     optimizer = torch.optim.AdamW(model.parameters())
     logger.info('Creating Dataset')
-    ds = ERA5Dataset('/Users/ksoll/git/DL4WeatherAndClimate/data/era5_6hourly.zarr', 1)
+    ds = ERA5Dataset(os.environ.get('DATAFOLDER'), 1)
     loader_params = {'batch_size': None,
                      'batch_sampler': None,
                      'shuffle': False,
@@ -41,8 +43,10 @@ def train():
     logger.info('Start training')
     for batch in tqdm(dl):
         optimizer.zero_grad()
-        batch = batch.to(device)
-        loss = model.training_step(batch)
+        inputs, labels = batch
+        inputs = inputs.to(device)
+        labels = labels.to(device)
+        loss = model.training_step(inputs, labels)
         loss.backward()
         optimizer.step()
         logger.info(loss)

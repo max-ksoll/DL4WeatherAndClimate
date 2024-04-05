@@ -33,8 +33,7 @@ class FuXi(torch.nn.Module):
         print(x.shape)
         return self.fc(x)
 
-    def training_step(self, batch) -> torch.Tensor:
-        inputs, labels = batch
+    def training_step(self, inputs, labels) -> torch.Tensor:
         outputs = self.forward(inputs)
         loss = torch.nn.functional.l1_loss(outputs, labels)
         return loss
