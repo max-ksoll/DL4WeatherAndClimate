@@ -17,7 +17,10 @@ class FuXi(torch.nn.Module):
         return x
 
     def training_step(self, batch) -> torch.Tensor:
-        raise NotImplementedError()
+        inputs, labels = batch
+        outputs = self.forward(inputs)
+        loss = torch.nn.functional.l1_loss(outputs, labels)
+        return loss
 
 
 class SpaceTimeCubeEmbedding(nn.Module):
