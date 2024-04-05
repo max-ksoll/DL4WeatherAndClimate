@@ -20,10 +20,14 @@ logger = logging.getLogger(__name__)
 
 
 def train():
+    logger.info('Using {} device'.format(device))
     logger.info('Creating Model')
     model = FuXi(25, 128, 2, 121, 240, heads=1)
+    logger.info('Setting Model as Train')
     model.train()
+    logger.info('Put Model on Device')
     model = model.to(device)
+    logger.info('Creating Optimizer')
     optimizer = torch.optim.AdamW(model.parameters())
     logger.info('Creating Dataset')
     ds = ERA5Dataset('/Users/ksoll/git/DL4WeatherAndClimate/data/era5_6hourly.zarr', 1)

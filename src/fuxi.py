@@ -1,20 +1,25 @@
 import torch
 from torchvision.models.swin_transformer import SwinTransformerBlockV2
 from torch import nn
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class FuXi(torch.nn.Module):
     def __init__(self, input_var, channels, transformer_block_count, lat, long, heads=8):
         super(FuXi, self).__init__()
-        self.layers = torch.nn.ModuleList([
-            SpaceTimeCubeEmbedding(input_var, channels),
-            UTransformer(transformer_block_count, channels, input_var, heads, lat, long)
-        ])
+        logger.info('Creating FuXi Model')
+        self.dim = [input_var, lat, long]
+        self.space_time_cube_embedding = SpaceTimeCubeEmbedding(input_var, channels)
+        self.u_transformer = UTransformer(transformer_block_count, channels, heads)
+        self.fc = torch.nn.Linear(channels * (lat // 4) * (long // 4), input_var * lat * long)
 
     def forward(self, x):
-        for layer in self.layers:
-            x = layer(x)
-        return x
+        embedding = self.space_time_cube_embedding(x)
+        inner = self.u_transformer(embedding)
+        out = self.fc(inner)
+        return out.reshape([out.shape[0]] + self.dim)
 
     def training_step(self, batch) -> torch.Tensor:
         inputs, labels = batch
@@ -25,6 +30,7 @@ class FuXi(torch.nn.Module):
 
 class SpaceTimeCubeEmbedding(nn.Module):
     def __init__(self, in_channels, out_channels):
+        logger.info('Creating SpaceTimeCubeEmbedding layer')
         super(SpaceTimeCubeEmbedding, self).__init__()
         self.layers = torch.nn.ModuleList(
 
@@ -45,6 +51,7 @@ class SpaceTimeCubeEmbedding(nn.Module):
 class DownBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(DownBlock, self).__init__()
+        logger.info('Creating DownBlock Layer')
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=2, padding=1)
 
         self.residual_block = nn.Sequential(
@@ -66,6 +73,7 @@ class DownBlock(nn.Module):
 class UpBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(UpBlock, self).__init__()
+        logger.info('Creating UpBlock Layer')
         # Scale the data size back up
         self.upsample = nn.ConvTranspose2d(
             in_channels * 2,
@@ -95,8 +103,9 @@ class UpBlock(nn.Module):
 
 
 class UTransformer(torch.nn.Module):
-    def __init__(self, layers, in_channels, out_channels, heads, lat, long):
+    def __init__(self, layers, in_channels, heads):
         super().__init__()
+        logger.info('Creating UTransformer Layer')
         self.downblock = DownBlock(in_channels, in_channels)
         window_size = [8, 8]
         self.attentionblock = [
@@ -108,12 +117,8 @@ class UTransformer(torch.nn.Module):
             ) for i in range(layers)
         ]
         self.upblock = UpBlock(in_channels, in_channels)
-        self.fc = torch.nn.Linear(in_channels * (lat // 4) * (long // 4), out_channels * lat * long)
-        self.lat = lat
-        self.long = long
 
     def forward(self, x):
-        bs = x.shape[0]
         down = self.downblock(x)
         x = down
         x = torch.permute(x, (0, 2, 3, 1))
@@ -122,5 +127,4 @@ class UTransformer(torch.nn.Module):
         x = torch.permute(x, (0, 3, 1, 2))
         x = self.upblock(x, down)
         x = torch.flatten(x, start_dim=1)
-        x = self.fc(x)
-        return torch.reshape(x, (bs, -1, self.lat, self.long))
+        return x
