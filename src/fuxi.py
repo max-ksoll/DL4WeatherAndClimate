@@ -4,11 +4,11 @@ from torch import nn
 
 
 class FuXi(torch.nn.Module):
-    def __init__(self, input_var, channels, transformer_block_count, lat, long):
+    def __init__(self, input_var, channels, transformer_block_count, lat, long, heads=8):
         super(FuXi, self).__init__()
         self.layers = torch.nn.ModuleList([
             SpaceTimeCubeEmbedding(input_var, channels),
-            UTransformer(transformer_block_count, channels, input_var, 8, lat, long)
+            UTransformer(transformer_block_count, channels, input_var, heads, lat, long)
         ])
 
     def forward(self, x):
@@ -104,8 +104,8 @@ class UTransformer(torch.nn.Module):
                 shift_size=[0 if i % 2 == 0 else w // 2 for w in window_size],
             ) for i in range(layers)
         ]
-        self.upblock = UpBlock(in_channels, out_channels)
-        self.fc = torch.nn.Linear(lat//4*long//4, lat*long)
+        self.upblock = UpBlock(in_channels, in_channels)
+        self.fc = torch.nn.Linear(in_channels * (lat // 4) * (long // 4), out_channels * lat * long)
         self.lat = lat
         self.long = long
 
@@ -118,7 +118,6 @@ class UTransformer(torch.nn.Module):
             x = block(x)
         x = torch.permute(x, (0, 3, 1, 2))
         x = self.upblock(x, down)
-        x = torch.flatten(x, -2, -1)
+        x = torch.flatten(x, start_dim=1)
         x = self.fc(x)
         return torch.reshape(x, (bs, -1, self.lat, self.long))
-
