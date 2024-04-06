@@ -115,6 +115,7 @@ def train():
         autoregression_steps_epochs = config.get('autoregression_steps_epochs')
         max_autoregression_steps = max(autoregression_steps_epochs.values())
         train_dl, test_dl, lat_weights = create_train_test_datasets(max_autoregression_steps)
+        lat_weights = lat_weights.to(device)
 
         logger.info('Creating Model')
         model_parameter = config.get('model_parameter')
