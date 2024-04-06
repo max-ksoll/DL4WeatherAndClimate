@@ -25,7 +25,7 @@ if torch.backends.mps.is_available():
     device = 'cpu'
 
 
-def evaluate(model_path):
+def evaluate(model_path, compute_metrik=True):
     # with wandb.init() as run:
     logger.info('Creating Model')
     model = FuXi(25, 64, 1, 121, 240, heads=1)
@@ -37,7 +37,7 @@ def evaluate(model_path):
         os.environ.get('DATAFOLDER'),
         1,
         TimeMode.AFTER,
-        start_time="2010-12-31T23:59:59",
+        start_time="2011-12-01T23:59:59",
         max_autoregression_steps=1
     )
     loader_params = {'batch_size': None,
@@ -67,9 +67,11 @@ def evaluate(model_path):
     predicted_labels_xr = xr.DataArray(predicted_labels_list, dims=['time', 'variables', 'lat', 'lon'],
                                        coords={'time': times})
     labels_xr = xr.DataArray(labels_list, dims=['time', 'variables', 'lat', 'lon'], coords={'time': times})
-    print(compute_weighted_rmse(predicted_labels_xr, labels_xr).values)
-    print(compute_weighted_acc(predicted_labels_xr, labels_xr).values)
-    print(compute_weighted_mae(predicted_labels_xr, labels_xr).values)
+    if compute_metrik:
+        print(compute_weighted_rmse(predicted_labels_xr, labels_xr).values)
+        print(compute_weighted_acc(predicted_labels_xr, labels_xr).values)
+        print(compute_weighted_mae(predicted_labels_xr, labels_xr).values)
+    return predicted_labels_xr, labels_xr
 
 if __name__ == '__main__':
     evaluate("/Users/xgxtphg/Documents/git/DL4WeatherAndClimate/model/model_best_loss_0.0804_20240406-103455.pth")
