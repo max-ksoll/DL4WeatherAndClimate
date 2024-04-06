@@ -121,7 +121,6 @@ def train():
         for epoch in range(config.get("epochs")):
             train_loss = train_epoch(model, optimizer, train_dl)
             test_loss = val_epoch(model, test_dl)
-            test_loss = test_loss.detach().cpu().item()
 
             run.log({
                 'train_loss': train_loss,
