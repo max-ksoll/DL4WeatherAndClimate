@@ -76,11 +76,7 @@ def train_epoch(model, optimizer, train_loader, autoregression_steps):
     for batch in pbar:
         optimizer.zero_grad()
         inputs, labels = batch
-        if device != 'cuda':
-            loss = model.step(inputs, labels, autoregression_steps=autoregression_steps)
-        else:
-            with torch.autocast(device_type=device, dtype=torch.float16):
-                loss = model.step(inputs, labels, autoregression_steps=autoregression_steps)
+        loss = model.step(inputs, labels, autoregression_steps=autoregression_steps)
         loss.backward()
         optimizer.step()
         whole_loss.append(loss.detach().cpu().item())
