@@ -98,6 +98,14 @@ def val_epoch(model, val_loader):
     return np.mean(whole_loss)
 
 
+def get_autoregression_steps(autoregression_steps_epochs, epoch):
+    smaller_values = [value for value in autoregression_steps_epochs.keys() if value <= epoch]
+    if not smaller_values:
+        return 1
+
+    return max(smaller_values)
+
+
 def train():
     with wandb.init() as run:
         config = run.config
@@ -114,14 +122,15 @@ def train():
         best_loss = float('inf')
         model.train()
         model = model.to(device)
-        logger.info('Watch Model by wandb')
-        wandb.watch(model, log_freq=100)
-        logger.info('Creating Optimizer')
-        optimizer = torch.optim.AdamW(model.parameters())
+        optimizer = torch.optim.AdamW(model.parameters(), lr=config.get("learning_rate"))
 
         train_dl, test_dl = create_train_test_datasets()
 
+        autoregression_steps_epochs = config.get('autoregression_steps_epochs')
         for epoch in range(config.get("epochs")):
+
+            autoregression_steps = get_autoregression_steps(autoregression_steps_epochs, epoch)
+
             train_loss = train_epoch(model, optimizer, train_dl)
             test_loss = val_epoch(model, test_dl)
 
@@ -132,7 +141,7 @@ def train():
 
             if test_loss < best_loss:
                 current_time = datetime.now().strftime('%Y%m%d-%H%M%S')
-                filename = f'model_best_loss_{best_loss:.4f}_{current_time}.pth'
+                filename = f'model_best_loss_{test_loss:.4f}_{current_time}.pth'
                 save_path = os.path.join(os.environ.get('MODEL_DIR'), filename)
                 torch.save(model.state_dict(), save_path)
                 logger.info(f'New best model saved with loss: {best_loss:.4f}')
