@@ -114,6 +114,9 @@ def train():
         best_loss = float('inf')
         model.train()
         model = model.to(device)
+        logger.info('Watch Model by wandb')
+        wandb.watch(model, log_freq=100)
+        logger.info('Creating Optimizer')
         optimizer = torch.optim.AdamW(model.parameters())
 
         train_dl, test_dl = create_train_test_datasets()
