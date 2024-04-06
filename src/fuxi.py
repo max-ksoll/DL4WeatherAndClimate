@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class FuXi(torch.nn.Module):
     def __init__(
-        self, input_var, channels, transformer_block_count, lat, long, heads=8
+            self, input_var, channels, transformer_block_count, lat, long, heads=8
     ):
         super(FuXi, self).__init__()
         logger.info("Creating FuXi Model")
@@ -37,7 +37,7 @@ class FuXi(torch.nn.Module):
         x = self.u_transformer(x)
         return self.fc(x)
 
-    def training_step(self, inputs, labels, autoregression_steps=1) -> torch.Tensor:
+    def step(self, inputs, labels, autoregression_steps=1) -> torch.Tensor:
         if autoregression_steps > inputs.shape[1]:
             raise ValueError('autoregression_steps cant be greater than number of samples')
 
