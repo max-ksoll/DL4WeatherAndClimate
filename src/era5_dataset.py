@@ -1,13 +1,24 @@
+import enum
+
 import numpy as np
 import torch
 import zarr
-import pandas as pd
-import code
+
+
+class TimeMode(enum.Enum):
+    ALL = 0
+    AFTER = 1
+    BEFORE = 2
+    BETWEEN = 3
 
 
 class ERA5Dataset(torch.utils.data.IterableDataset):
 
-    def __init__(self, path_file, batch_size, max_autoregression_steps=1):
+    def __init__(self, path_file, batch_size,
+                 time_mode: TimeMode,
+                 max_autoregression_steps=1,
+                 start_time="2011-01-01T00:00:00",
+                 end_time="2011-12-31T18:00:00"):
         super(ERA5Dataset, self).__init__()
 
         self.batch_size = batch_size
@@ -26,14 +37,28 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
         self.max_minus_min = self.max_minus_min[:, None, None, None]
         self.max_autoregression_steps = max_autoregression_steps + 2
 
+        times = np.array(self.sources["time"])
+        if time_mode == TimeMode.AFTER:
+            times = times >= np.datetime64(start_time)
+        elif time_mode == TimeMode.BEFORE:
+            times = times <= np.datetime64(end_time)
+        elif time_mode == TimeMode.BETWEEN:
+            times_gt = times >= np.datetime64(start_time)
+            times_ls = times <= np.datetime64(end_time)
+            times = times_gt & times_ls
+        else:
+            times = np.ones_like(times)
+
+        self.idxs = np.arange(self.sources["time"].shape[0])[times]
+        remove_idxs = self.idxs <= np.max(self.idxs)-self.max_autoregression_steps
+        self.idxs = self.idxs[remove_idxs]
+        self.len = self.idxs.shape[0]
+
         self.rng = np.random.default_rng()
-        self.shuffle()
 
     def shuffle(self):
-
-        len = self.sources["time"].shape[0]
-        self.idxs = self.rng.permutation(np.arange(len))
-
+        self.idxs = self.rng.permutation(self.idxs)
+        print(self.idxs)
         self.len = self.idxs.shape[0]
 
     def __len__(self):
@@ -46,12 +71,13 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
 
         for bidx in range(iter_start, iter_end, self.batch_size):
             idx_t = self.idxs[bidx: bidx + self.batch_size]
+            print(idx_t)
 
             idxes = [idx_t + i for i in range(self.max_autoregression_steps)]
             sources = [
                 self.get_at_idx(idx) for idx in idxes
             ]
-            targets = sources[1:]
+            targets = sources[2:]
             sources = sources[:-1]
 
             source = torch.stack(sources, dim=1)

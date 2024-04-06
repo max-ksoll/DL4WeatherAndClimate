@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 import wandb
 from src.sweep_config import getSweepID
 from src.fuxi import FuXi
-from src.era5_dataset import ERA5Dataset
+from src.era5_dataset import ERA5Dataset, TimeMode
 import logging
 from tqdm import tqdm
 import dotenv
@@ -37,16 +37,31 @@ def train():
         logger.info('Creating Optimizer')
         optimizer = torch.optim.AdamW(model.parameters())
         logger.info('Creating Dataset')
-        ds = ERA5Dataset(os.environ.get('DATAFOLDER'), 1, max_autoregression_steps=10)
+        train_ds = ERA5Dataset(
+            os.environ.get('DATAFOLDER'),
+            1,
+            TimeMode.BEFORE,
+            end_time="2022-12-31T18:00:00",
+            max_autoregression_steps=1
+        )
+        test_ds = ERA5Dataset(
+            os.environ.get('DATAFOLDER'),
+            1,
+            TimeMode.BETWEEN,
+            start_time="2023-01-01T00:00:00",
+            end_time="2023-12-31T18:00:00",
+            max_autoregression_steps=1
+        )
         loader_params = {'batch_size': None,
                          'batch_sampler': None,
                          'shuffle': False,
                          'num_workers': os.cpu_count() // 2,
                          'pin_memory': True}
         logger.info('Creating DataLoader')
-        dl = DataLoader(ds, **loader_params, sampler=None)
+        train_dl = DataLoader(train_ds, **loader_params, sampler=None)
+        test_dl = DataLoader(test_ds, **loader_params, sampler=None)
         logger.info('Start training')
-        pbar = tqdm(dl, desc='Initialisierung')
+        pbar = tqdm(train_dl, desc='Initialisierung')
         model_save_dir = 'model'
         os.makedirs(model_save_dir, exist_ok=True)
         for batch in pbar:
