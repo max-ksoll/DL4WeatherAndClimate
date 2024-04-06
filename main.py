@@ -25,8 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 def train():
-    project = "DL4WeatherAndClimate"
-    with wandb.init(project=project) as run:
+    with wandb.init() as run:
         logger.info('Using {} device'.format(device))
         logger.info('Creating Model')
         model = FuXi(25, 1024, 36, 121, 240, heads=4)

@@ -30,6 +30,5 @@ def getSweepID():
     sweep_id = wandb.sweep(
         sweep=sweep_config,
         project="DL4WeatherAndClimate",
-        entity="philippgrill",
     )
     return sweep_id
