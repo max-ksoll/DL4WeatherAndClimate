@@ -98,8 +98,8 @@ def train():
         logger.info('Using {} device'.format(device))
 
         autoregression_steps_epochs = config.get('autoregression_steps_epochs')
-        max_autoregression_steps = max(autoregression_steps_epochs.values())
-        train_dl, test_dl, lat_weights = create_train_test_datasets(max_autoregression_steps)
+        min_autoregression_steps = min(autoregression_steps_epochs.values())
+        train_dl, test_dl, lat_weights = create_train_test_datasets(min_autoregression_steps)
         lat_weights = lat_weights.to(device)
 
         logger.info('Creating Model')
@@ -116,10 +116,13 @@ def train():
         best_loss = float('inf')
         wandb.watch(model, log_freq=100)
         optimizer = torch.optim.AdamW(model.parameters(), lr=config.get("learning_rate"))
-
+        cur_ds_autoregression_steps = min_autoregression_steps
         for epoch in range(config.get("epochs")):
 
             autoregression_steps = get_autoregression_steps(autoregression_steps_epochs, epoch)
+            if autoregression_steps > cur_ds_autoregression_steps:
+                train_dl, test_dl, _ = create_train_test_datasets(autoregression_steps)
+                cur_ds_autoregression_steps = autoregression_steps
 
             train_loss = train_epoch(model, optimizer, train_dl, autoregression_steps)
             test_loss = val_epoch(model, test_dl, autoregression_steps)
