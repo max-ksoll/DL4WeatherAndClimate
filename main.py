@@ -21,7 +21,6 @@ if torch.cuda.is_available():
 if torch.backends.mps.is_available():
     device = 'cpu'
 torch.set_default_device(device)
-scaler = torch.cuda.amp.GradScaler(enabled=True)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -77,11 +76,13 @@ def train_epoch(model, optimizer, train_loader, autoregression_steps):
     for batch in pbar:
         optimizer.zero_grad()
         inputs, labels = batch
-        with torch.autocast(device_type=device, dtype=torch.float16):
+        if device != 'cuda':
             loss = model.step(inputs, labels, autoregression_steps=autoregression_steps)
-        scaler.scale(loss).backward()
-        scaler.step(optimizer)
-        scaler.update()
+        else:
+            with torch.autocast(device_type=device, dtype=torch.float16):
+                loss = model.step(inputs, labels, autoregression_steps=autoregression_steps)
+        loss.backward()
+        optimizer.step()
         whole_loss.append(loss.detach().cpu().item())
         pbar.set_description(f'Train Loss: {loss.detach().cpu().item():.4f}')
     return np.mean(whole_loss)
