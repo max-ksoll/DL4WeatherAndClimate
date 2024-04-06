@@ -51,15 +51,14 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
 
         self.idxs = np.arange(self.sources["time"].shape[0])[times]
         if len(self.idxs) > 0:
-            remove_idxs = self.idxs > np.max(self.idxs)-self.max_autoregression_steps
-            self.idxs = self.idxs[remove_idxs]
+            keep_idxs = self.idxs <= np.max(self.idxs)-self.max_autoregression_steps
+            self.idxs = self.idxs[keep_idxs]
         self.len = self.idxs.shape[0]
 
         self.rng = np.random.default_rng()
 
     def shuffle(self):
         self.idxs = self.rng.permutation(self.idxs)
-        self.len = self.idxs.shape[0]
 
     def __len__(self):
         return self.len
@@ -71,7 +70,6 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
 
         for bidx in range(iter_start, iter_end, self.batch_size):
             idx_t = self.idxs[bidx: bidx + self.batch_size]
-            print(idx_t)
 
             idxes = [idx_t + i for i in range(self.max_autoregression_steps)]
             sources = [

@@ -44,6 +44,7 @@ def train():
             end_time="2022-12-31T18:00:00",
             max_autoregression_steps=1
         )
+        print(len(train_ds))
         test_ds = ERA5Dataset(
             os.environ.get('DATAFOLDER'),
             1,
