@@ -28,7 +28,7 @@ def train():
     with wandb.init() as run:
         logger.info('Using {} device'.format(device))
         logger.info('Creating Model')
-        model = FuXi(25, 1024, 36, 121, 240, heads=4)
+        model = FuXi(25, 512, 24, 121, 240, heads=4)
         best_loss = float('inf')
         logger.info('Setting Model as Train')
         model.train()
@@ -37,7 +37,7 @@ def train():
         logger.info('Creating Optimizer')
         optimizer = torch.optim.AdamW(model.parameters())
         logger.info('Creating Dataset')
-        ds = ERA5Dataset(os.environ.get('DATAFOLDER'), 1)
+        ds = ERA5Dataset(os.environ.get('DATAFOLDER'), 1, max_autoregression_steps=10)
         loader_params = {'batch_size': None,
                          'batch_sampler': None,
                          'shuffle': False,
@@ -54,7 +54,7 @@ def train():
             inputs, labels = batch
             inputs = inputs.to(device)
             labels = labels.to(device)
-            loss = model.training_step(inputs, labels)
+            loss = model.training_step(inputs, labels, autoregression_steps=10)
             wandb.log({
                "loss": loss.item(),
             })

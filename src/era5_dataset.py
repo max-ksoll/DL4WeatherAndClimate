@@ -24,7 +24,7 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
         self.max_minus_min = self.maxs - self.mins
         self.mins = self.mins[:, None, None, None]
         self.max_minus_min = self.max_minus_min[:, None, None, None]
-        self.max_autoregression_steps = max_autoregression_steps
+        self.max_autoregression_steps = max_autoregression_steps + 2
 
         self.rng = np.random.default_rng()
         self.shuffle()
@@ -45,7 +45,7 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
         iter_start, iter_end = self.worker_workset()
 
         for bidx in range(iter_start, iter_end, self.batch_size):
-            idx_t = self.idxs[bidx : bidx + self.batch_size]
+            idx_t = self.idxs[bidx: bidx + self.batch_size]
 
             idxes = [idx_t + i for i in range(self.max_autoregression_steps)]
             sources = [
@@ -88,7 +88,7 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
 
         if worker_info is None:
             iter_start = 0
-            iter_end = len(self) - (self.max_autoregression_steps + 1)
+            iter_end = len(self) - self.max_autoregression_steps
 
         else:
             # split workload
@@ -98,6 +98,6 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
             iter_start = int(worker_id * per_worker)
             iter_end = int(iter_start + per_worker)
             if worker_info.id + 1 == worker_info.num_workers:
-                iter_end = int(temp) - (self.max_autoregression_steps + 1)
+                iter_end = int(temp) - self.max_autoregression_steps
 
         return iter_start, iter_end

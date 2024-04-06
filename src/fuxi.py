@@ -38,7 +38,7 @@ class FuXi(torch.nn.Module):
         return self.fc(x)
 
     def training_step(self, inputs, labels, autoregression_steps=1) -> torch.Tensor:
-        if autoregression_steps > inputs.shape[1]-1:
+        if autoregression_steps > inputs.shape[1]:
             raise ValueError('autoregression_steps cant be greater than number of samples')
 
         loss = torch.Tensor([0]).to(inputs.device)
