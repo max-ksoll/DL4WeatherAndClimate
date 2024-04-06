@@ -20,9 +20,9 @@ def get_parameters_dict():
         "batch_size": {"value": 1},
         "learning_rate": {"value": 2.5e-5},
         "model_parameter": {"value": {
-            "channel": 1536,
-            "transformer_blocks": 36,
-            "heads": 8
+            "channel": 768,
+            "transformer_blocks": 16,
+            "heads": 4
         }},
         "autoregression_steps_epochs": {"value": {
             0: 1,
