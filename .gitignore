@@ -165,3 +165,5 @@ data
 model/
 
 .DS_Store
+
+src/wandb/

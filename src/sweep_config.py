@@ -7,7 +7,7 @@ import wandb
 
 def get_sweep():
     executionTime = datetime.now().strftime("%d/%m/%Y, %H:%M")
-    name = str("CaseStudiesOfAIImplementationResults " + executionTime)
+    name = str("DL4WeatherAndClimate " + executionTime)
     sweep_config = {"method": "bayes", "name": name}
     metric = {"name": "mse", "goal": "minimize"}
     sweep_config["metric"] = metric
