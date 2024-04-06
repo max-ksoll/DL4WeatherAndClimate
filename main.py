@@ -32,15 +32,15 @@ def create_train_test_datasets(max_autoregression_steps) -> Tuple[DataLoader, Da
         os.environ.get('DATAFOLDER'),
         max_autoregression_steps,
         TimeMode.BEFORE,
-        end_time="2022-12-31T18:00:00",
+        end_time="2011-11-30T18:00:00",
         max_autoregression_steps=max_autoregression_steps
     )
     test_ds = ERA5Dataset(
         os.environ.get('DATAFOLDER'),
         max_autoregression_steps,
         TimeMode.BETWEEN,
-        start_time="2023-01-01T00:00:00",
-        end_time="2023-12-31T18:00:00",
+        start_time="2011-12-01T00:00:00",
+        end_time="2011-12-31T18:00:00",
         max_autoregression_steps=max_autoregression_steps
     )
     loader_params = {'batch_size': None,
