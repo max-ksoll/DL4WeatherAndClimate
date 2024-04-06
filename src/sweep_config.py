@@ -20,14 +20,14 @@ def get_parameters_dict():
         "batch_size": {"value": 1},
         "learning_rate": {"value": 2.5e-5},
         "model_parameter": {"value": {
-            "channel": 768,
+            "channel": 512,
             "transformer_blocks": 16,
             "heads": 4
         }},
         "autoregression_steps_epochs": {"value": {
             0: 1,
-            10: 4,
-            25: 12
+            10: 2,
+            25: 4
         }}
     }
     return parameters_dict
