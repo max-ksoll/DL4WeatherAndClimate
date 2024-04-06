@@ -6,7 +6,6 @@ import code
 
 
 class ERA5Dataset(torch.utils.data.IterableDataset):
-
     def __init__(self, path_file, batch_size):
         super(ERA5Dataset, self).__init__()
 
@@ -15,9 +14,13 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
         store = zarr.DirectoryStore(path_file)
         self.sources = zarr.group(store=store)
 
-        self.mins = torch.Tensor([193.48901, -3.3835982e-05, -65.45247, -96.98215, -6838.8906])
-        self.maxs = torch.Tensor([324.80637, 0.029175894, 113.785934, 89.834595, 109541.625])
-        self.max_minus_min = (self.maxs - self.mins)
+        self.mins = torch.Tensor(
+            [193.48901, -3.3835982e-05, -65.45247, -96.98215, -6838.8906]
+        )
+        self.maxs = torch.Tensor(
+            [324.80637, 0.029175894, 113.785934, 89.834595, 109541.625]
+        )
+        self.max_minus_min = self.maxs - self.mins
         self.mins = self.mins[:, None, None, None]
         self.max_minus_min = self.max_minus_min[:, None, None, None]
 
@@ -26,7 +29,7 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
 
     def shuffle(self):
 
-        len = self.sources['time'].shape[0]
+        len = self.sources["time"].shape[0]
         self.idxs = self.rng.permutation(np.arange(len))
 
         self.len = self.idxs.shape[0]
@@ -40,7 +43,7 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
         iter_start, iter_end = self.worker_workset()
 
         for bidx in range(iter_start, iter_end, self.batch_size):
-            idx_t = self.idxs[bidx: bidx + self.batch_size]
+            idx_t = self.idxs[bidx : bidx + self.batch_size]
 
             source_t_m1 = self.get_at_idx(idx_t - 1)
             source_t = self.get_at_idx(idx_t)
@@ -58,12 +61,16 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
             yield source, target
 
     def get_at_idx(self, idx_t):
-        return torch.stack([
-            torch.tensor(self.sources['t'][idx_t]),
-            torch.tensor(self.sources['q'][idx_t]),
-            torch.tensor(self.sources['u'][idx_t]),
-            torch.tensor(self.sources['v'][idx_t]),
-            torch.tensor(self.sources['z'][idx_t])], 1)
+        return torch.stack(
+            [
+                torch.tensor(self.sources["t"][idx_t]),
+                torch.tensor(self.sources["q"][idx_t]),
+                torch.tensor(self.sources["u"][idx_t]),
+                torch.tensor(self.sources["v"][idx_t]),
+                torch.tensor(self.sources["z"][idx_t]),
+            ],
+            1,
+        )
 
     def __len__(self):
         return self.len // self.batch_size
