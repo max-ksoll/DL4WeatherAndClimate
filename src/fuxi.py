@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import torch
 from torchvision.models.swin_transformer import SwinTransformerBlockV2
 from torch import nn
@@ -41,17 +43,29 @@ class FuXi(torch.nn.Module):
         x = self.u_transformer(x)
         return self.fc(x)
 
-    def step(self, inputs, labels, autoregression_steps=1) -> torch.Tensor:
+    def step(self, inputs, labels, autoregression_steps=1, return_out=False) -> torch.Tensor | Tuple[
+        torch.Tensor, torch.Tensor]:
+
         if autoregression_steps > inputs.shape[1]:
             raise ValueError('autoregression_steps cant be greater than number of samples')
+
+        if return_out:
+            outputs = []
 
         loss = torch.Tensor([0]).to(inputs.device)
         for step in range(autoregression_steps):
             cur_input = inputs[:, step:step + 2, :, :, :]
             cur_target = labels[:, step, :, :, :]
-            outputs = self.forward(cur_input)
-            outputs *= self.lat_weights
-            loss += torch.nn.functional.l1_loss(outputs, cur_target)
+            out = self.forward(cur_input)
+            if return_out:
+                outputs.append(out.detach().cpu())
+            out *= self.lat_weights
+            loss += torch.nn.functional.l1_loss(out, cur_target)
+
+        if return_out:
+            outputs = torch.stack(outputs, 0)
+            return loss, outputs
+
         return loss
 
 

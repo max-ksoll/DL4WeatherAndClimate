@@ -2,10 +2,11 @@
 Functions for evaluating forecasts.
 """
 import numpy as np
+import torch
 import xarray as xr
 
 
-def compute_weighted_rmse(da_fc, da_true, weights_lat, mean_dims=xr.ALL_DIMS):
+def compute_weighted_rmse(forecast, label, lat_weights):
     """
     Compute the RMSE with latitude weighting from two xr.DataArrays.
 
@@ -16,14 +17,14 @@ def compute_weighted_rmse(da_fc, da_true, weights_lat, mean_dims=xr.ALL_DIMS):
     Returns:
         rmse: Latitude weighted root mean squared error
     """
-    error = da_fc - da_true
-    weights_lat /= weights_lat.mean()
-    weights_lat = weights_lat[None, None, :, None]
-    rmse = np.sqrt(((error) ** 2 * weights_lat).mean(mean_dims))
+    error = forecast - label
+    lat_weights /= lat_weights.mean()
+    lat_weights = lat_weights[:, None]
+    rmse = torch.sqrt((error ** 2 * lat_weights).mean([0, 2, 3]))
     return rmse
 
 
-def compute_weighted_acc(da_fc, da_true, mean_dims=xr.ALL_DIMS):
+def compute_weighted_acc(forecast, labels, lat_weights):
     """
     Compute the ACC with latitude weighting from two xr.DataArrays.
     WARNING: Does not work if datasets contain NaNs
@@ -36,32 +37,27 @@ def compute_weighted_acc(da_fc, da_true, mean_dims=xr.ALL_DIMS):
         acc: Latitude weighted acc
     """
 
-    clim = da_true.mean('time')
-    try:
-        t = np.intersect1d(da_fc.time, da_true.time)
-        fa = da_fc.sel(time=t) - clim
-    except AttributeError:
-        t = da_true.time.values
-        fa = da_fc - clim
-    a = da_true.sel(time=t) - clim
+    mean = torch.mean(labels, dim=0)
+    fa = forecast - mean
+    a = labels - mean
 
-    weights_lat = np.cos(np.deg2rad(da_fc.lat))
-    weights_lat /= weights_lat.mean()
-    w = weights_lat
+    lat_weights /= lat_weights.mean()
+    lat_weights = lat_weights[:, None]
+    w = lat_weights
 
     fa_prime = fa - fa.mean()
     a_prime = a - a.mean()
 
     acc = (
-            np.sum(w * fa_prime * a_prime) /
-            np.sqrt(
-                np.sum(w * fa_prime ** 2) * np.sum(w * a_prime ** 2)
+            torch.sum(w * fa_prime * a_prime, dim=[0, 2, 3]) /
+            torch.sqrt(
+                torch.sum(w * fa_prime ** 2, dim=[0, 2, 3]) * torch.sum(w * a_prime ** 2, dim=[0, 2, 3])
             )
     )
     return acc
 
 
-def compute_weighted_mae(da_fc, da_true, mean_dims=xr.ALL_DIMS):
+def compute_weighted_mae(forecast, labels, lat_weights):
     """
     Compute the MAE with latitude weighting from two xr.DataArrays.
     Args:
@@ -71,10 +67,10 @@ def compute_weighted_mae(da_fc, da_true, mean_dims=xr.ALL_DIMS):
     Returns:
         mae: Latitude weighted root mean absolute error
     """
-    error = da_fc - da_true
-    weights_lat = np.cos(np.deg2rad(error.lat))
-    weights_lat /= weights_lat.mean()
-    mae = (np.abs(error) * weights_lat).mean(mean_dims)
+    error = forecast - labels
+    lat_weights /= lat_weights.mean()
+    lat_weights = lat_weights[:, None]
+    mae = (np.abs(error) * lat_weights).mean([0, 2, 3])
     return mae
 
 

@@ -3,9 +3,11 @@ import os
 from typing import Tuple
 
 import numpy as np
+import pandas as pd
 import torch
 from torch.utils.data import DataLoader
 import wandb
+from src.score_torch import compute_weighted_rmse, compute_weighted_acc, compute_weighted_mae
 from src.sweep_config import getSweepID
 from src.fuxi import FuXi
 from src.era5_dataset import ERA5Dataset, TimeMode
@@ -70,17 +72,31 @@ def train_epoch(model, optimizer, train_loader, autoregression_steps):
     return np.mean(whole_loss)
 
 
-def val_epoch(model, val_loader, autoregression_steps):
+def val_epoch(model, val_loader, autoregression_steps, weight_lat):
     model.eval()
     whole_loss = []
+    pred = []
+    label = []
     pbar = tqdm(val_loader, desc='Val Loss: ', leave=False)
     for batch in pbar:
         inputs, labels = batch
         inputs, labels = inputs.to(device), labels.to(device)
-        loss = model.step(inputs, labels, autoregression_steps=autoregression_steps)
+        loss, outs = model.step(inputs, labels, autoregression_steps=autoregression_steps, return_out=True)
+
+        pred.append(outs.cpu())
+        label.append(labels.cpu())
+
         whole_loss.append(loss.detach().cpu().item())
         pbar.set_description(f'Val Loss: {loss.detach().cpu().item():.4f}')
-    return np.mean(whole_loss)
+
+    pred = torch.squeeze(torch.stack(pred, 0))
+    label = torch.squeeze(torch.stack(label, 0))
+
+    rmse = compute_weighted_rmse(pred, label, weight_lat)
+    acc = compute_weighted_acc(pred, label, weight_lat)
+    mae = compute_weighted_mae(pred, label, weight_lat)
+
+    return np.mean(whole_loss), rmse, acc, mae
 
 
 def get_autoregression_steps(autoregression_steps_epochs, epoch):
@@ -118,19 +134,29 @@ def train():
         optimizer = torch.optim.AdamW(model.parameters(), lr=config.get("learning_rate"), betas=(0.9, 0.95),
                                       weight_decay=0.1)
         cur_ds_autoregression_steps = min_autoregression_steps
-        for epoch in range(config.get("epochs")):
 
+        for epoch in range(config.get("epochs")):
             autoregression_steps = get_autoregression_steps(autoregression_steps_epochs, epoch)
             if autoregression_steps > cur_ds_autoregression_steps:
                 train_dl, test_dl, _ = create_train_test_datasets(autoregression_steps)
                 cur_ds_autoregression_steps = autoregression_steps
 
             train_loss = train_epoch(model, optimizer, train_dl, autoregression_steps)
-            test_loss = val_epoch(model, test_dl, autoregression_steps)
+            test_loss, rmse, acc, mae = val_epoch(model, test_dl, autoregression_steps, lat_weights)
+
+            val_df = pd.DataFrame({
+                'rmse': rmse,
+                'acc': acc,
+                'mae': mae
+            })
 
             run.log({
                 'train_loss': train_loss,
-                'test_loss': test_loss
+                'test_loss': test_loss,
+                'metrics': wandb.Table(data=val_df, columns=['rmse', 'acc', 'mae']),
+                'mean_rmse': rmse.mean(),
+                'mean_acc': acc.mean(),
+                'mean_mae': mae.mean()
             })
 
             if test_loss < best_loss:

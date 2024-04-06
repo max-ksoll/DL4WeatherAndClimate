@@ -16,7 +16,7 @@ def get_sweep():
 
 def get_parameters_dict():
     parameters_dict = {
-        "epochs": {"value": 20},
+        "epochs": {"value": 50},
         "batch_size": {"value": 1},
         "learning_rate": {"value": 2.5e-5},
         "model_parameter": {"value": {
@@ -26,8 +26,8 @@ def get_parameters_dict():
         }},
         "autoregression_steps_epochs": {"value": {
             0: 1,
-            5: 4,
-            10: 10
+            10: 4,
+            25: 12
         }}
     }
     return parameters_dict
