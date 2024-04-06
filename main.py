@@ -30,14 +30,14 @@ def create_train_test_datasets(max_autoregression_steps) -> Tuple[DataLoader, Da
     logger.info('Creating Dataset')
     train_ds = ERA5Dataset(
         os.environ.get('DATAFOLDER'),
-        1,
+        max_autoregression_steps,
         TimeMode.BEFORE,
         end_time="2022-12-31T18:00:00",
         max_autoregression_steps=1
     )
     test_ds = ERA5Dataset(
         os.environ.get('DATAFOLDER'),
-        1,
+        max_autoregression_steps,
         TimeMode.BETWEEN,
         start_time="2023-01-01T00:00:00",
         end_time="2023-12-31T18:00:00",
@@ -131,6 +131,7 @@ def train():
         best_loss = float('inf')
         model.train()
         model = model.to(device)
+        wandb.watch(model, log_freq=100)
         optimizer = torch.optim.AdamW(model.parameters(), lr=config.get("learning_rate"))
 
         for epoch in range(config.get("epochs")):
@@ -152,6 +153,7 @@ def train():
                 torch.save(model.state_dict(), save_path)
                 logger.info(f'New best model saved with loss: {test_loss:.4f}')
                 best_loss = test_loss - test_loss * 0.1
+        wandb.unwatch(model)
 
 
 if __name__ == '__main__':
