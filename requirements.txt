@@ -6,3 +6,4 @@ jupyter
 tqdm
 python-dotenv
 wandb
+matplotlib

@@ -57,6 +57,9 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
 
         self.rng = np.random.default_rng()
 
+    def get_latitude_weights(self):
+        return torch.Tensor(np.cos(np.deg2rad(self.sources["lats"])))
+
     def shuffle(self):
         self.idxs = self.rng.permutation(self.idxs)
 

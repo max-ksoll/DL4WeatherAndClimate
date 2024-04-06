@@ -10,10 +10,14 @@ logger = logging.getLogger(__name__)
 
 class FuXi(torch.nn.Module):
     def __init__(
-            self, input_var, channels, transformer_block_count, lat, long, heads=8
+            self, input_var, channels, transformer_block_count, lat, long, heads=8, lat_weights=None
     ):
         super(FuXi, self).__init__()
         logger.info("Creating FuXi Model")
+        self.lat_weights = lat_weights
+        if self.lat_weights is None:
+            self.lat_weights = torch.ones(lat)
+        self.lat_weights = self.lat_weights[:, None]
         self.dim = [input_var, lat, long]
         self.space_time_cube_embedding = SpaceTimeCubeEmbedding(input_var, channels)
         self.u_transformer = UTransformer(transformer_block_count, channels, heads)
@@ -46,6 +50,7 @@ class FuXi(torch.nn.Module):
             cur_input = inputs[:, step:step + 2, :, :, :]
             cur_target = labels[:, step, :, :, :]
             outputs = self.forward(cur_input)
+            outputs *= self.lat_weights
             loss += torch.nn.functional.l1_loss(outputs, cur_target)
         return loss
 
