@@ -50,8 +50,9 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
             times = np.ones_like(times)
 
         self.idxs = np.arange(self.sources["time"].shape[0])[times]
-        remove_idxs = self.idxs > np.max(self.idxs)-self.max_autoregression_steps
-        self.idxs = self.idxs[remove_idxs]
+        if len(self.idxs) > 0:
+            remove_idxs = self.idxs > np.max(self.idxs)-self.max_autoregression_steps
+            self.idxs = self.idxs[remove_idxs]
         self.len = self.idxs.shape[0]
 
         self.rng = np.random.default_rng()

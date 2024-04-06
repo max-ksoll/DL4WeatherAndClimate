@@ -16,9 +16,9 @@ def get_sweep():
 
 def get_parameters_dict():
     parameters_dict = {
-        "epochs": {"values": [10, 15]},
-        "batch_size": {"values": [1028, 256]},
-        "learning_rate": {"values": [0.01, 0.1]},
+        "epochs": {"value": 5},
+        "batch_size": {"value": 1},
+        "learning_rate": {"values": [2.5e-5, 2.5e-4]},
     }
     return parameters_dict
 
