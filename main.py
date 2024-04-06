@@ -115,7 +115,8 @@ def train():
 
         best_loss = float('inf')
         wandb.watch(model, log_freq=100)
-        optimizer = torch.optim.AdamW(model.parameters(), lr=config.get("learning_rate"))
+        optimizer = torch.optim.AdamW(model.parameters(), lr=config.get("learning_rate"), betas=(0.9, 0.95),
+                                      weight_decay=0.1)
         cur_ds_autoregression_steps = min_autoregression_steps
         for epoch in range(config.get("epochs")):
 

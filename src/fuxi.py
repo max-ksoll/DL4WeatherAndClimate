@@ -148,6 +148,7 @@ class UTransformer(torch.nn.Module):
                 num_heads=heads,
                 window_size=window_size,
                 shift_size=[0 if i % 2 == 0 else w // 2 for w in window_size],
+                stochastic_depth_prob=0.2
             )
             self.attentionblock.append(block)
 
