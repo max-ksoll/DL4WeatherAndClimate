@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Union
 
 import torch
 from torchvision.models.swin_transformer import SwinTransformerBlockV2
@@ -43,8 +43,8 @@ class FuXi(torch.nn.Module):
         x = self.u_transformer(x)
         return self.fc(x)
 
-    def step(self, inputs, labels, autoregression_steps=1, return_out=False) -> torch.Tensor | Tuple[
-        torch.Tensor, torch.Tensor]:
+    def step(self, inputs, labels, autoregression_steps=1, return_out=False) -> Union[torch.Tensor, Tuple[
+        torch.Tensor, torch.Tensor]]:
 
         if autoregression_steps > inputs.shape[1]:
             raise ValueError('autoregression_steps cant be greater than number of samples')
