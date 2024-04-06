@@ -60,14 +60,15 @@ def train():
             })
             loss.backward()
             optimizer.step()
-            if loss.item() < best_loss:
-                best_loss = loss.item()
+            loss = loss.detach().cpu().item()
+            if loss < best_loss:
+                best_loss = loss-loss*0.1
                 current_time = datetime.now().strftime('%Y%m%d-%H%M%S')
                 filename = f'model_best_loss_{best_loss:.4f}_{current_time}.pth'
                 save_path = os.path.join(model_save_dir, filename)
                 torch.save(model.state_dict(), save_path)
                 logger.info(f'New best model saved with loss: {best_loss:.4f}')
-            pbar.set_description(f'Loss: {loss.item():.4f}')
+            pbar.set_description(f'Loss: {loss:.4f}')
 
 
 if __name__ == '__main__':

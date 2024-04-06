@@ -161,3 +161,7 @@ cython_debug/
 /wandb/
 .idea
 data
+
+model/
+
+.DS_Store
