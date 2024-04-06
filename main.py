@@ -20,7 +20,6 @@ if torch.cuda.is_available():
     device = 'cuda'
 if torch.backends.mps.is_available():
     device = 'cpu'
-torch.set_default_device(device)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -56,11 +55,13 @@ def create_train_test_datasets(max_autoregression_steps) -> Tuple[DataLoader, Da
 
 
 def train_epoch(model, optimizer, train_loader, autoregression_steps):
+    model.train()
     whole_loss = []
     pbar = tqdm(train_loader, desc='Train Loss: ', leave=False)
     for batch in pbar:
         optimizer.zero_grad()
         inputs, labels = batch
+        inputs, labels = inputs.to(device), labels.to(device)
         loss = model.step(inputs, labels, autoregression_steps=autoregression_steps)
         loss.backward()
         optimizer.step()
@@ -70,10 +71,12 @@ def train_epoch(model, optimizer, train_loader, autoregression_steps):
 
 
 def val_epoch(model, val_loader, autoregression_steps):
+    model.eval()
     whole_loss = []
     pbar = tqdm(val_loader, desc='Val Loss: ', leave=False)
     for batch in pbar:
         inputs, labels = batch
+        inputs, labels = inputs.to(device), labels.to(device)
         loss = model.step(inputs, labels, autoregression_steps=autoregression_steps)
         whole_loss.append(loss.detach().cpu().item())
         pbar.set_description(f'Val Loss: {loss.detach().cpu().item():.4f}')
@@ -97,6 +100,7 @@ def train():
         autoregression_steps_epochs = config.get('autoregression_steps_epochs')
         max_autoregression_steps = max(autoregression_steps_epochs.values())
         train_dl, test_dl, lat_weights = create_train_test_datasets(max_autoregression_steps)
+        lat_weights = lat_weights.to(device)
 
         logger.info('Creating Model')
         model_parameter = config.get('model_parameter')
@@ -107,10 +111,9 @@ def train():
             121, 240,
             heads=model_parameter['heads'],
             lat_weights=lat_weights
-        )
+        ).to(device)
 
         best_loss = float('inf')
-        model.train()
         wandb.watch(model, log_freq=100)
         optimizer = torch.optim.AdamW(model.parameters(), lr=config.get("learning_rate"))
 
