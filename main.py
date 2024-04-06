@@ -20,6 +20,8 @@ if torch.cuda.is_available():
     device = 'cuda'
 if torch.backends.mps.is_available():
     device = 'cpu'
+torch.set_default_device(device)
+scaler = torch.cuda.amp.GradScaler(enabled=True)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -75,11 +77,11 @@ def train_epoch(model, optimizer, train_loader, autoregression_steps):
     for batch in pbar:
         optimizer.zero_grad()
         inputs, labels = batch
-        inputs = inputs.to(device)
-        labels = labels.to(device)
-        loss = model.step(inputs, labels, autoregression_steps=autoregression_steps)
-        loss.backward()
-        optimizer.step()
+        with torch.autocast(device_type=device, dtype=torch.float16):
+            loss = model.step(inputs, labels, autoregression_steps=autoregression_steps)
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
         whole_loss.append(loss.detach().cpu().item())
         pbar.set_description(f'Train Loss: {loss.detach().cpu().item():.4f}')
     return np.mean(whole_loss)
@@ -90,8 +92,6 @@ def val_epoch(model, val_loader, autoregression_steps):
     pbar = tqdm(val_loader, desc='Val Loss: ', leave=False)
     for batch in pbar:
         inputs, labels = batch
-        inputs = inputs.to(device)
-        labels = labels.to(device)
         loss = model.step(inputs, labels, autoregression_steps=autoregression_steps)
         whole_loss.append(loss.detach().cpu().item())
         pbar.set_description(f'Val Loss: {loss.detach().cpu().item():.4f}')
@@ -115,7 +115,6 @@ def train():
         autoregression_steps_epochs = config.get('autoregression_steps_epochs')
         max_autoregression_steps = max(autoregression_steps_epochs.values())
         train_dl, test_dl, lat_weights = create_train_test_datasets(max_autoregression_steps)
-        lat_weights = lat_weights.to(device)
 
         logger.info('Creating Model')
         model_parameter = config.get('model_parameter')
@@ -130,7 +129,6 @@ def train():
 
         best_loss = float('inf')
         model.train()
-        model = model.to(device)
         wandb.watch(model, log_freq=100)
         optimizer = torch.optim.AdamW(model.parameters(), lr=config.get("learning_rate"))
 
