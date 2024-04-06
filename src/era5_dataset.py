@@ -51,7 +51,7 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
 
         self.idxs = np.arange(self.sources["time"].shape[0])[times]
         if len(self.idxs) > 0:
-            keep_idxs = self.idxs <= np.max(self.idxs)-self.max_autoregression_steps
+            keep_idxs = self.idxs <= np.max(self.idxs) - self.max_autoregression_steps
             self.idxs = self.idxs[keep_idxs]
         self.len = self.idxs.shape[0]
 
@@ -105,10 +105,6 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
             1,
         )
 
-    def __len__(self):
-        return self.len // self.batch_size
-
-    #####################
     def worker_workset(self):
 
         worker_info = torch.utils.data.get_worker_info()

@@ -34,7 +34,7 @@ def create_train_test_datasets(max_autoregression_steps) -> Tuple[DataLoader, Da
         max_autoregression_steps,
         TimeMode.BEFORE,
         end_time="2022-12-31T18:00:00",
-        max_autoregression_steps=1
+        max_autoregression_steps=max_autoregression_steps
     )
     test_ds = ERA5Dataset(
         os.environ.get('DATAFOLDER'),
@@ -42,23 +42,8 @@ def create_train_test_datasets(max_autoregression_steps) -> Tuple[DataLoader, Da
         TimeMode.BETWEEN,
         start_time="2023-01-01T00:00:00",
         end_time="2023-12-31T18:00:00",
-        max_autoregression_steps=1
+        max_autoregression_steps=max_autoregression_steps
     )
-    # train_ds = ERA5Dataset(
-    #     os.environ.get('DATAFOLDER'),
-    #     1,
-    #     TimeMode.BEFORE,
-    #     end_time="2010-01-04T18:00:00",
-    #     max_autoregression_steps=max_autoregression_steps
-    # )
-    # test_ds = ERA5Dataset(
-    #     os.environ.get('DATAFOLDER'),
-    #     1,
-    #     TimeMode.BETWEEN,
-    #     start_time="2010-02-01T00:00:00",
-    #     end_time="2010-02-04T18:00:00",
-    #     max_autoregression_steps=max_autoregression_steps
-    # )
     loader_params = {'batch_size': None,
                      'batch_sampler': None,
                      'shuffle': False,
