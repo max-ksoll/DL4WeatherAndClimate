@@ -9,9 +9,11 @@ logger = logging.getLogger(__name__)
 
 
 class FuXi(torch.nn.Module):
-    def __init__(self, input_var, channels, transformer_block_count, lat, long, heads=8):
+    def __init__(
+        self, input_var, channels, transformer_block_count, lat, long, heads=8
+    ):
         super(FuXi, self).__init__()
-        logger.info('Creating FuXi Model')
+        logger.info("Creating FuXi Model")
         self.dim = [input_var, lat, long]
         self.space_time_cube_embedding = SpaceTimeCubeEmbedding(input_var, channels)
         self.u_transformer = UTransformer(transformer_block_count, channels, heads)
@@ -24,9 +26,11 @@ class FuXi(torch.nn.Module):
             torch.nn.Linear(lat // 4, lat),
             # put long dim front
             Permute([0, 1, 3, 2]),
-            torch.nn.Linear(long // 4, long)
+            torch.nn.Linear(long // 4, long),
         )
-        self.modules = nn.ModuleList([self.space_time_cube_embedding, self.u_transformer, self.fc])
+        self.modules = nn.ModuleList(
+            [self.space_time_cube_embedding, self.u_transformer, self.fc]
+        )
 
     def forward(self, x):
         x = self.space_time_cube_embedding(x)
@@ -41,19 +45,22 @@ class FuXi(torch.nn.Module):
 
 class SpaceTimeCubeEmbedding(nn.Module):
     def __init__(self, in_channels, out_channels):
-        logger.info('Creating SpaceTimeCubeEmbedding layer')
+        logger.info("Creating SpaceTimeCubeEmbedding layer")
         super(SpaceTimeCubeEmbedding, self).__init__()
-        self.conv3d = nn.Conv3d(in_channels, out_channels, kernel_size=(2, 4, 4), stride=(2, 4, 4))
+        self.conv3d = nn.Conv3d(
+            in_channels, out_channels, kernel_size=(2, 4, 4), stride=(2, 4, 4)
+        )
         self.layer_norm = nn.LayerNorm(out_channels)
-        self.layers = torch.nn.ModuleList([
-            self.conv3d,
-            self.layer_norm
-        ])
+        self.layers = torch.nn.ModuleList([self.conv3d, self.layer_norm])
 
     def forward(self, x):
-        x = x.permute(0, 2, 1, 3, 4)  # Move the channel dimension to the end for LayerNorm
+        x = x.permute(
+            0, 2, 1, 3, 4
+        )  # Move the channel dimension to the end for LayerNorm
         x = self.conv3d(x)
-        x = x.permute(0, 2, 3, 4, 1)  # Move the channel dimension to the end for LayerNorm
+        x = x.permute(
+            0, 2, 3, 4, 1
+        )  # Move the channel dimension to the end for LayerNorm
         x = self.layer_norm(x)
         x = x.permute(0, 1, 4, 2, 3)
         x = torch.squeeze(x, dim=1)
@@ -63,14 +70,16 @@ class SpaceTimeCubeEmbedding(nn.Module):
 class ResidualBlock(nn.Module):
     def __init__(self, channels):
         super(ResidualBlock, self).__init__()
-        self.layers = torch.nn.ModuleList([
-            nn.Conv2d(channels, channels, kernel_size=3, stride=1, padding=1),
-            nn.GroupNorm(2, channels),
-            nn.SiLU(),
-            nn.Conv2d(channels, channels, kernel_size=3, stride=1, padding=1),
-            nn.GroupNorm(2, channels),
-            nn.SiLU()
-        ])
+        self.layers = torch.nn.ModuleList(
+            [
+                nn.Conv2d(channels, channels, kernel_size=3, stride=1, padding=1),
+                nn.GroupNorm(2, channels),
+                nn.SiLU(),
+                nn.Conv2d(channels, channels, kernel_size=3, stride=1, padding=1),
+                nn.GroupNorm(2, channels),
+                nn.SiLU(),
+            ]
+        )
 
     def forward(self, x):
         for layer in self.layers:
@@ -81,13 +90,12 @@ class ResidualBlock(nn.Module):
 class DownBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(DownBlock, self).__init__()
-        logger.info('Creating DownBlock Layer')
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=2, padding=1)
+        logger.info("Creating DownBlock Layer")
+        self.conv1 = nn.Conv2d(
+            in_channels, out_channels, kernel_size=3, stride=2, padding=1
+        )
         self.residual_block = ResidualBlock(out_channels)
-        self.layers = torch.nn.ModuleList([
-            self.conv1,
-            self.residual_block
-        ])
+        self.layers = torch.nn.ModuleList([self.conv1, self.residual_block])
 
     def forward(self, x):
         out = self.conv1(x)
@@ -99,16 +107,12 @@ class DownBlock(nn.Module):
 class UpBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(UpBlock, self).__init__()
-        logger.info('Creating UpBlock Layer')
+        logger.info("Creating UpBlock Layer")
         self.upsample = nn.ConvTranspose2d(
-            in_channels * 2,
-            in_channels,
-            kernel_size=2, stride=2)
+            in_channels * 2, in_channels, kernel_size=2, stride=2
+        )
         self.residual_block = ResidualBlock(out_channels)
-        self.layers = torch.nn.ModuleList([
-            self.upsample,
-            self.residual_block
-        ])
+        self.layers = torch.nn.ModuleList([self.upsample, self.residual_block])
 
     def forward(self, x, skip_connection):
         x = torch.cat([x, skip_connection], dim=1)
@@ -122,7 +126,7 @@ class UpBlock(nn.Module):
 class UTransformer(torch.nn.Module):
     def __init__(self, layers, in_channels, heads):
         super().__init__()
-        logger.info('Creating UTransformer Layer')
+        logger.info("Creating UTransformer Layer")
         self.downblock = DownBlock(in_channels, in_channels)
         window_size = [8, 8]
         self.attentionblock = []
@@ -136,10 +140,9 @@ class UTransformer(torch.nn.Module):
             self.attentionblock.append(block)
 
         self.upblock = UpBlock(in_channels, in_channels)
-        self.layers = torch.nn.ModuleList([
-                                              self.downblock,
-                                              self.upblock
-                                          ] + self.attentionblock)
+        self.layers = torch.nn.ModuleList(
+            [self.downblock, self.upblock] + self.attentionblock
+        )
 
     def forward(self, x):
         down = self.downblock(x)
