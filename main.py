@@ -70,7 +70,7 @@ def train():
             inputs = inputs.to(device)
             labels = labels.to(device)
             loss = model.training_step(inputs, labels, autoregression_steps=10)
-            wandb.log({
+            run.log({
                "loss": loss.item(),
             })
             loss.backward()
