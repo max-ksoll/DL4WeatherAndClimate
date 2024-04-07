@@ -21,7 +21,7 @@ def get_parameters_dict():
         "learning_rate": {"value": 2.5e-5},
         "model_parameter": {"value": {
             "channel": 1024,
-            "transformer_blocks": 32,
+            "transformer_blocks": 16,
             "heads": 8
         }},
         "autoregression_steps_epochs": {"value": [

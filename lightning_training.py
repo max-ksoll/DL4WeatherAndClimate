@@ -23,6 +23,7 @@ device = 'auto'
 if torch.backends.mps.is_available():
     device = 'cpu'
 
+
 def create_train_test_datasets(max_autoregression_steps) -> Tuple[DataLoader, DataLoader, torch.Tensor]:
     logger.info('Creating Dataset')
     train_ds = ERA5Dataset(
@@ -71,7 +72,8 @@ def train():
         trainer = L.Trainer(
             accelerator=device,
             logger=wandb_logger,
-            callbacks=[checkpoint_callback]
+            callbacks=[checkpoint_callback],
+            # precision="bf16"
         )
 
         for item in config.get('autoregression_steps_epochs'):
