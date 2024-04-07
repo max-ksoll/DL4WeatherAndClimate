@@ -35,6 +35,7 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
         self.max_minus_min = self.maxs - self.mins
         self.mins = self.mins[:, None, None, None]
         self.max_minus_min = self.max_minus_min[:, None, None, None]
+        self.auto_step_tensor = max_autoregression_steps
         self.max_autoregression_steps = max_autoregression_steps + 2
 
         times = np.array(self.sources["time"])
@@ -56,6 +57,7 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
         self.len = self.idxs.shape[0]
 
         self.rng = np.random.default_rng()
+        self.lat_weights = self.get_latitude_weights()[:, None]
 
     def get_latitude_weights(self):
         return torch.Tensor(np.cos(np.deg2rad(self.sources["lats"])))
@@ -78,20 +80,20 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
             sources = [
                 self.get_at_idx(idx) for idx in idxes
             ]
-            targets = sources[2:]
-            sources = sources[:-1]
+            # targets = sources[2:]
+            # sources = sources[:-1]
 
             source = torch.stack(sources, dim=1)
-            target = torch.stack(targets, dim=1)
+            # target = torch.stack(targets, dim=1)
 
             # Normalization
             source = (source - self.mins) / self.max_minus_min
-            target = (target - self.mins) / self.max_minus_min
+            # target = (target - self.mins) / self.max_minus_min
 
             source = source.flatten(start_dim=2, end_dim=3)
-            target = target.flatten(start_dim=2, end_dim=3)
+            # target = target.flatten(start_dim=2, end_dim=3)
 
-            yield source, target
+            yield source, self.auto_step_tensor, self.lat_weights
 
     def get_at_idx(self, idx_t):
         return torch.stack(

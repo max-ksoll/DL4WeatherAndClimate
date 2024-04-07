@@ -24,12 +24,11 @@ def get_parameters_dict():
             "transformer_blocks": 16,
             "heads": 4
         }},
-        "autoregression_steps_epochs": {"value": {
-            0: 1,
-            10: 2,
-            20: 3,
-            35: 4
-        }}
+        "autoregression_steps_epochs": {"value": [
+            {'epochs': 10, 'steps': 1},
+            {'epochs': 10, 'steps': 2},
+            {'epochs': 10, 'steps': 3},
+        ]}
     }
     return parameters_dict
 

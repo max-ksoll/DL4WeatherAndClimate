@@ -2,9 +2,9 @@ import torch
 
 
 def compute_weighted_rmse(forecast, label, lat_weights):
+    print(forecast.shape, label.shape, lat_weights.shape)
     error = forecast - label
     lat_weights /= lat_weights.mean()
-    lat_weights = lat_weights[:, None]
     rmse = torch.sqrt((error ** 2 * lat_weights).mean([0, 1, 3, 4]))
     return rmse
 
@@ -15,7 +15,6 @@ def compute_weighted_acc(forecast, labels, lat_weights):
     a = labels - mean
 
     lat_weights /= lat_weights.mean()
-    lat_weights = lat_weights[:, None]
     w = lat_weights
 
     fa_prime = fa - fa.mean()
@@ -33,6 +32,5 @@ def compute_weighted_acc(forecast, labels, lat_weights):
 def compute_weighted_mae(forecast, labels, lat_weights):
     error = forecast - labels
     lat_weights /= lat_weights.mean()
-    lat_weights = lat_weights[:, None]
     mae = (torch.abs(error) * lat_weights).mean([0, 1, 3, 4])
     return mae
