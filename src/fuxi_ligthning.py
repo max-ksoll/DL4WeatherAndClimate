@@ -16,19 +16,22 @@ class FuXi(L.LightningModule):
         )
         self.lr = config.get("learning_rate")
 
+    def set_autoregression_steps(self, autoregression_steps):
+        self.autoregression_steps = autoregression_steps
+
     def training_step(self, batch, batch_idx):
-        ts, autoregression_steps, lat_weights = batch
-        loss = self.model.step(ts, lat_weights, autoregression_steps=autoregression_steps)
+        ts, lat_weights = batch
+        loss = self.model.step(ts, lat_weights, autoregression_steps=self.autoregression_steps)
         self.log('train_loss', loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
-        ts, autoregression_steps, lat_weights = batch
-        loss, outs = self.model.step(ts, lat_weights, autoregression_steps=autoregression_steps, return_out=True)
+        ts, lat_weights = batch
+        loss, outs = self.model.step(ts, lat_weights, autoregression_steps=self.autoregression_steps, return_out=True)
 
-        rmse = compute_weighted_rmse(outs, ts[:, 2:, :, :, :].cpu(), lat_weights)
-        acc = compute_weighted_acc(outs, ts[:, 2:, :, :, :].cpu(), lat_weights)
-        mae = compute_weighted_mae(outs, ts[:, 2:, :, :, :].cpu(), lat_weights)
+        rmse = compute_weighted_rmse(outs, ts[:, 2:, :, :, :].cpu(), lat_weights.cpu())
+        acc = compute_weighted_acc(outs, ts[:, 2:, :, :, :].cpu(), lat_weights.cpu())
+        mae = compute_weighted_mae(outs, ts[:, 2:, :, :, :].cpu(), lat_weights.cpu())
         self.log('val_loss', loss)
         self.log('val_rmse', rmse.mean())
         self.log('val_acc', acc.mean())

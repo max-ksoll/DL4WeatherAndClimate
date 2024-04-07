@@ -75,7 +75,10 @@ def train():
         )
 
         for item in config.get('autoregression_steps_epochs'):
-            train_dl, test_dl, lat_weights = create_train_test_datasets(item.get('steps'))
+            autoregression_steps = item.get('steps')
+            train_dl, test_dl, lat_weights = create_train_test_datasets(autoregression_steps)
+
+            model.set_autoregression_steps(autoregression_steps)
 
             trainer.fit_loop.max_epochs = item.get('epochs')
             trainer.fit(
