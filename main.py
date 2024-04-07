@@ -92,9 +92,9 @@ def val_epoch(model, val_loader, autoregression_steps, weight_lat):
     pred = torch.squeeze(torch.stack(pred, 0))
     label = torch.squeeze(torch.stack(label, 0))
 
-    rmse = compute_weighted_rmse(pred, label, weight_lat)
-    acc = compute_weighted_acc(pred, label, weight_lat)
-    mae = compute_weighted_mae(pred, label, weight_lat)
+    rmse = compute_weighted_rmse(pred, label, weight_lat.cpu())
+    acc = compute_weighted_acc(pred, label, weight_lat.cpu())
+    mae = compute_weighted_mae(pred, label, weight_lat.cpu())
 
     return np.mean(whole_loss), rmse, acc, mae
 
