@@ -26,9 +26,9 @@ class FuXi(L.LightningModule):
         ts, autoregression_steps, lat_weights = batch
         loss, outs = self.model.step(ts, lat_weights, autoregression_steps=autoregression_steps, return_out=True)
 
-        rmse = compute_weighted_rmse(outs, ts[:, 2:, :, :, :], lat_weights)
-        acc = compute_weighted_acc(outs, ts[:, 2:, :, :, :], lat_weights)
-        mae = compute_weighted_mae(outs, ts[:, 2:, :, :, :], lat_weights)
+        rmse = compute_weighted_rmse(outs, ts[:, 2:, :, :, :].cpu(), lat_weights)
+        acc = compute_weighted_acc(outs, ts[:, 2:, :, :, :].cpu(), lat_weights)
+        mae = compute_weighted_mae(outs, ts[:, 2:, :, :, :].cpu(), lat_weights)
         self.log('val_loss', loss)
         self.log('val_rmse', rmse.mean())
         self.log('val_acc', acc.mean())
