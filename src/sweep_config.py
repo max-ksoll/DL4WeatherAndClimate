@@ -16,10 +16,20 @@ def get_sweep():
 
 def get_parameters_dict():
     parameters_dict = {
-        "epochs": {"value": 5},
+        "epochs": {"value": 50},
         "batch_size": {"value": 1},
         "learning_rate": {"value": 2.5e-5},
-        "model_parameter": {"value": {"channel": 512, "transformer_blocks": 24, "heads": 4}},
+        "model_parameter": {"value": {
+            "channel": 512,
+            "transformer_blocks": 16,
+            "heads": 4
+        }},
+        "autoregression_steps_epochs": {"value": {
+            0: 1,
+            10: 2,
+            20: 3,
+            35: 4
+        }}
     }
     return parameters_dict
 

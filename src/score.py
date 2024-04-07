@@ -4,7 +4,8 @@ Functions for evaluating forecasts.
 import numpy as np
 import xarray as xr
 
-def compute_weighted_rmse(da_fc, da_true, mean_dims=xr.ALL_DIMS):
+
+def compute_weighted_rmse(da_fc, da_true, weights_lat, mean_dims=xr.ALL_DIMS):
     """
     Compute the RMSE with latitude weighting from two xr.DataArrays.
 
@@ -16,10 +17,11 @@ def compute_weighted_rmse(da_fc, da_true, mean_dims=xr.ALL_DIMS):
         rmse: Latitude weighted root mean squared error
     """
     error = da_fc - da_true
-    weights_lat = np.cos(np.deg2rad(error.lat))
     weights_lat /= weights_lat.mean()
-    rmse = np.sqrt(((error)**2 * weights_lat).mean(mean_dims))
+    weights_lat = weights_lat[None, None, :, None]
+    rmse = np.sqrt(((error) ** 2 * weights_lat).mean(mean_dims))
     return rmse
+
 
 def compute_weighted_acc(da_fc, da_true, mean_dims=xr.ALL_DIMS):
     """
@@ -58,6 +60,7 @@ def compute_weighted_acc(da_fc, da_true, mean_dims=xr.ALL_DIMS):
     )
     return acc
 
+
 def compute_weighted_mae(da_fc, da_true, mean_dims=xr.ALL_DIMS):
     """
     Compute the MAE with latitude weighting from two xr.DataArrays.
@@ -91,5 +94,3 @@ def evaluate_iterative_forecast(da_fc, da_true, func, mean_dims=xr.ALL_DIMS):
         fc['time'] = fc.time + np.timedelta64(int(f), 'h')
         rmses.append(func(fc, da_true, mean_dims))
     return xr.concat(rmses, 'lead_time')
-
-

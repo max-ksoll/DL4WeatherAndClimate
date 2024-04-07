@@ -163,6 +163,7 @@ cython_debug/
 data
 
 model/
+models/
 
 .DS_Store
 

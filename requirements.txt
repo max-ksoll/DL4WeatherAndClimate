@@ -6,3 +6,7 @@ jupyter
 tqdm
 python-dotenv
 wandb
+matplotlib
+cartopy
+xarray
+ipympl
