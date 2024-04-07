@@ -27,7 +27,8 @@ def get_parameters_dict():
         "autoregression_steps_epochs": {"value": {
             0: 1,
             10: 2,
-            25: 4
+            20: 3,
+            35: 4
         }}
     }
     return parameters_dict

@@ -56,10 +56,10 @@ def create_train_test_datasets(max_autoregression_steps) -> Tuple[DataLoader, Da
     return train_dl, test_dl, train_ds.get_latitude_weights()
 
 
-def train_epoch(model, optimizer, train_loader, autoregression_steps):
+def train_epoch(model, optimizer, train_loader, autoregression_steps, epoch):
     model.train()
     whole_loss = []
-    pbar = tqdm(train_loader, desc='Train Loss: ', leave=False)
+    pbar = tqdm(train_loader, desc=f'Epoch: {epoch} - Train Loss: ', leave=True)
     for batch in pbar:
         optimizer.zero_grad()
         inputs, labels = batch
@@ -89,8 +89,8 @@ def val_epoch(model, val_loader, autoregression_steps, weight_lat):
         whole_loss.append(loss.detach().cpu().item())
         pbar.set_description(f'Val Loss: {loss.detach().cpu().item():.4f}')
 
-    pred = torch.squeeze(torch.stack(pred, 0))
-    label = torch.squeeze(torch.stack(label, 0))
+    pred = torch.flatten(torch.stack(pred, dim=0), 0, 1)
+    label = torch.flatten(torch.stack(label, dim=0), 0, 1)
 
     rmse = compute_weighted_rmse(pred, label, weight_lat.cpu())
     acc = compute_weighted_acc(pred, label, weight_lat.cpu())
@@ -141,7 +141,7 @@ def train():
                 train_dl, test_dl, _ = create_train_test_datasets(autoregression_steps)
                 cur_ds_autoregression_steps = autoregression_steps
 
-            train_loss = train_epoch(model, optimizer, train_dl, autoregression_steps)
+            train_loss = train_epoch(model, optimizer, train_dl, autoregression_steps, epoch)
             test_loss, rmse, acc, mae = val_epoch(model, test_dl, autoregression_steps, lat_weights)
 
             val_df = pd.DataFrame({
