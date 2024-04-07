@@ -2,7 +2,6 @@ import torch
 
 
 def compute_weighted_rmse(forecast, label, lat_weights):
-    print(forecast.shape, label.shape, lat_weights.shape)
     error = forecast - label
     lat_weights /= lat_weights.mean()
     rmse = torch.sqrt((error ** 2 * lat_weights).mean([0, 1, 3, 4]))
