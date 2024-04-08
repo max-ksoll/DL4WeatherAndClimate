@@ -26,12 +26,14 @@ if torch.backends.mps.is_available():
 
 def create_train_test_datasets(max_autoregression_steps) -> Tuple[DataLoader, DataLoader, torch.Tensor]:
     logger.info('Creating Dataset')
+    col_names = os.environ.get('COL_NAMES', 'lessig')
     train_ds = ERA5Dataset(
         os.environ.get('DATAFOLDER'),
         max_autoregression_steps,
         TimeMode.BEFORE,
         end_time="2011-11-30T18:00:00",
-        max_autoregression_steps=max_autoregression_steps
+        max_autoregression_steps=max_autoregression_steps,
+        zarr_col_names=col_names
     )
     test_ds = ERA5Dataset(
         os.environ.get('DATAFOLDER'),
@@ -39,7 +41,8 @@ def create_train_test_datasets(max_autoregression_steps) -> Tuple[DataLoader, Da
         TimeMode.BETWEEN,
         start_time="2011-12-01T00:00:00",
         end_time="2011-12-31T18:00:00",
-        max_autoregression_steps=max_autoregression_steps
+        max_autoregression_steps=max_autoregression_steps,
+        zarr_col_names=col_names
     )
     loader_params = {'batch_size': None,
                      'batch_sampler': None,

@@ -19,12 +19,12 @@ def get_parameters_dict():
         "batch_size": {"value": 1},
         "learning_rate": {"value": 2.5e-5},
         "model_parameter": {"value": {
-            "channel": 512,
-            "transformer_blocks": 16,
-            "heads": 4
+            "channel": 32,
+            "transformer_blocks": 1,
+            "heads": 1
         }},
         "autoregression_steps_epochs": {"value": [
-            {'epochs': 10, 'steps': 12},
+            {'epochs': 10, 'steps': 1},
             {'epochs': 10, 'steps': 2},
             {'epochs': 10, 'steps': 3},
             {'epochs': 10, 'steps': 4},

@@ -18,7 +18,8 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
                  time_mode: TimeMode,
                  max_autoregression_steps=1,
                  start_time="2011-01-01T00:00:00",
-                 end_time="2011-12-31T18:00:00"):
+                 end_time="2011-12-31T18:00:00",
+                 zarr_col_names="lessig"):
         super(ERA5Dataset, self).__init__()
 
         self.batch_size = batch_size
@@ -57,6 +58,12 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
 
         self.rng = np.random.default_rng()
         self.lat_weights = self.get_latitude_weights()[:, None]
+
+        dim_names = {
+            "lessig": ["t", "q", "u", "v", "z"],
+            "gcloud": ["2m_temperature", "specific_humidity", "u_component_of_wind", "v_component_of_wind", "geopotential"]
+        }
+        self.dim_names = dim_names[zarr_col_names]
 
     def get_latitude_weights(self):
         return torch.Tensor(np.cos(np.deg2rad(self.sources["lats"])))
@@ -97,11 +104,11 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
     def get_at_idx(self, idx_t):
         return torch.stack(
             [
-                torch.tensor(self.sources["t"][idx_t]),
-                torch.tensor(self.sources["q"][idx_t]),
-                torch.tensor(self.sources["u"][idx_t]),
-                torch.tensor(self.sources["v"][idx_t]),
-                torch.tensor(self.sources["z"][idx_t]),
+                torch.tensor(self.sources[self.dim_names[0]][idx_t]),
+                torch.tensor(self.sources[self.dim_names[1]][idx_t]),
+                torch.tensor(self.sources[self.dim_names[2]][idx_t]),
+                torch.tensor(self.sources[self.dim_names[3]][idx_t]),
+                torch.tensor(self.sources[self.dim_names[4]][idx_t]),
             ],
             1,
         )
