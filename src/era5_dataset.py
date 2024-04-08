@@ -1,6 +1,7 @@
 import enum
 
 import numpy as np
+import pandas as pd
 import torch
 import zarr
 
@@ -39,6 +40,15 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
         self.max_autoregression_steps = max_autoregression_steps + 2
 
         times = np.array(self.sources["time"])
+
+        def stunden_zu_datum(stunden_array):
+            basis_datum = pd.Timestamp('1959-01-01 00:00:00')
+            datum_array = [basis_datum + pd.Timedelta(hours=int(h)) for h in stunden_array]
+            return datum_array
+
+        if times.dtype == np.int64:
+            times = stunden_zu_datum(times)
+
         if time_mode == TimeMode.AFTER:
             times = times >= np.datetime64(start_time)
         elif time_mode == TimeMode.BEFORE:
