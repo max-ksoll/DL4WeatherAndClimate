@@ -1,8 +1,10 @@
 import enum
 
 import numpy as np
+import pandas as pd
 import torch
 import zarr
+from torch.utils.data import Dataset
 
 
 class TimeMode(enum.Enum):
@@ -12,16 +14,15 @@ class TimeMode(enum.Enum):
     BETWEEN = 3
 
 
-class ERA5Dataset(torch.utils.data.IterableDataset):
+class ERA5Dataset(Dataset):
 
-    def __init__(self, path_file, batch_size,
+    def __init__(self, path_file,
                  time_mode: TimeMode,
                  max_autoregression_steps=1,
                  start_time="2011-01-01T00:00:00",
-                 end_time="2011-12-31T18:00:00"):
+                 end_time="2011-12-31T18:00:00",
+                 zarr_col_names="lessig"):
         super(ERA5Dataset, self).__init__()
-
-        self.batch_size = batch_size
 
         store = zarr.DirectoryStore(path_file)
         self.sources = zarr.group(store=store)
@@ -38,6 +39,15 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
         self.max_autoregression_steps = max_autoregression_steps + 2
 
         times = np.array(self.sources["time"])
+
+        def stunden_zu_datum(stunden_array):
+            basis_datum = pd.Timestamp('1959-01-01 00:00:00')
+            datum_array = [basis_datum + pd.Timedelta(hours=int(h)) for h in stunden_array]
+            return datum_array
+
+        if times.dtype == np.int64:
+            times = stunden_zu_datum(times)
+
         if time_mode == TimeMode.AFTER:
             times = times >= np.datetime64(start_time)
         elif time_mode == TimeMode.BEFORE:
@@ -55,72 +65,46 @@ class ERA5Dataset(torch.utils.data.IterableDataset):
             self.idxs = self.idxs[keep_idxs]
         self.len = self.idxs.shape[0]
 
-        self.rng = np.random.default_rng()
+        dim_names = {
+            "lessig": {
+                "cols": ["t", "q", "u", "v", "z", "lats"],
+                "slice_idx": [0, 1, 2, 3, 4],
+                "permutation": [0, 1, 2, 3]
+            },
+            "gcloud": {
+                "cols": ["temperature", "specific_humidity", "u_component_of_wind", "v_component_of_wind",
+                         "geopotential", "latitude"],
+                "slice_idx": [0, 3, 6, 9, 12],
+                "permutation": [0, 1, 3, 2]
+            }
+        }
+        self.dim_names = dim_names[zarr_col_names]['cols']
+        self.slice_idx = dim_names[zarr_col_names]['slice_idx']
+        self.permutation = dim_names[zarr_col_names]['permutation']
+        self.lat_weights = self.get_latitude_weights()[:, None]
 
     def get_latitude_weights(self):
-        return torch.Tensor(np.cos(np.deg2rad(self.sources["lats"])))
-
-    def shuffle(self):
-        self.idxs = self.rng.permutation(self.idxs)
+        return torch.Tensor(np.cos(np.deg2rad(self.sources[self.dim_names[5]])))
 
     def __len__(self):
         return self.len
 
-    def __iter__(self):
-
-        self.shuffle()
-        iter_start, iter_end = self.worker_workset()
-
-        for bidx in range(iter_start, iter_end, self.batch_size):
-            idx_t = self.idxs[bidx: bidx + self.batch_size]
-
-            idxes = [idx_t + i for i in range(self.max_autoregression_steps)]
-            sources = [
-                self.get_at_idx(idx) for idx in idxes
-            ]
-            targets = sources[2:]
-            sources = sources[:-1]
-
-            source = torch.stack(sources, dim=1)
-            target = torch.stack(targets, dim=1)
-
-            # Normalization
-            source = (source - self.mins) / self.max_minus_min
-            target = (target - self.mins) / self.max_minus_min
-
-            source = source.flatten(start_dim=2, end_dim=3)
-            target = target.flatten(start_dim=2, end_dim=3)
-
-            yield source, target
+    def __getitem__(self, idx):
+        sources = [
+            self.get_at_idx(i) for i in range(self.idxs[idx], self.idxs[idx] + self.max_autoregression_steps)
+        ]
+        sources = torch.stack(sources, dim=0)
+        # Normalization
+        sources = (sources - self.mins) / self.max_minus_min
+        sources = sources.flatten(start_dim=1, end_dim=2)
+        return sources, self.lat_weights
 
     def get_at_idx(self, idx_t):
-        return torch.stack(
-            [
-                torch.tensor(self.sources["t"][idx_t]),
-                torch.tensor(self.sources["q"][idx_t]),
-                torch.tensor(self.sources["u"][idx_t]),
-                torch.tensor(self.sources["v"][idx_t]),
-                torch.tensor(self.sources["z"][idx_t]),
-            ],
-            1,
-        )
-
-    def worker_workset(self):
-
-        worker_info = torch.utils.data.get_worker_info()
-
-        if worker_info is None:
-            iter_start = 0
-            iter_end = len(self) - self.max_autoregression_steps
-
-        else:
-            # split workload
-            temp = len(self)
-            per_worker = int(np.floor(temp / float(worker_info.num_workers)))
-            worker_id = worker_info.id
-            iter_start = int(worker_id * per_worker)
-            iter_end = int(iter_start + per_worker)
-            if worker_info.id + 1 == worker_info.num_workers:
-                iter_end = int(temp) - self.max_autoregression_steps
-
-        return iter_start, iter_end
+        stack = torch.stack([
+            torch.tensor(self.sources[self.dim_names[0]][idx_t]),
+            torch.tensor(self.sources[self.dim_names[1]][idx_t]),
+            torch.tensor(self.sources[self.dim_names[2]][idx_t]),
+            torch.tensor(self.sources[self.dim_names[3]][idx_t]),
+            torch.tensor(self.sources[self.dim_names[4]][idx_t]),
+        ], 1, )
+        return torch.permute(stack[self.slice_idx, :, :, :], self.permutation)

@@ -1,0 +1,109 @@
+import logging
+import os
+from typing import Tuple
+
+import dotenv
+import pytorch_lightning as L
+import torch
+from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.loggers import WandbLogger
+from torch.utils.data import DataLoader
+
+import wandb
+from src.era5_dataset import ERA5Dataset, TimeMode
+from src.fuxi_ligthning import FuXi
+from src.sweep_config import getSweepID
+
+dotenv.load_dotenv()
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+device = 'auto'
+if torch.backends.mps.is_available():
+    device = 'cpu'
+
+
+def create_train_test_datasets(batch_size, max_autoregression_steps) -> Tuple[DataLoader, DataLoader, torch.Tensor]:
+    logger.info('Creating Dataset')
+    col_names = os.environ.get('COL_NAMES', 'lessig')
+    train_ds = ERA5Dataset(
+        os.environ.get('DATAFOLDER'),
+        TimeMode.BETWEEN,
+        start_time="2000-01-01T00:00:00",
+        end_time="2021-12-31T18:00:00",
+        max_autoregression_steps=max_autoregression_steps,
+        zarr_col_names=col_names
+    )
+    test_ds = ERA5Dataset(
+        os.environ.get('DATAFOLDER'),
+        TimeMode.BETWEEN,
+        start_time="2022-01-01T00:00:00",
+        end_time="2022-12-31T18:00:00",
+        max_autoregression_steps=max_autoregression_steps,
+        zarr_col_names=col_names
+    )
+    train_loader_params = {
+        'batch_size': batch_size,
+        'shuffle': True,
+        'num_workers': os.cpu_count() // 2,
+        'pin_memory': True
+    }
+    val_loader_params = {
+        'batch_size': batch_size,
+        'shuffle': False,
+        'num_workers': os.cpu_count() // 2,
+        'pin_memory': True
+    }
+    logger.info('Creating DataLoader')
+    train_dl = DataLoader(train_ds, **train_loader_params)
+    test_dl = DataLoader(test_ds, **val_loader_params)
+    return train_dl, test_dl, train_ds.get_latitude_weights()
+
+
+def get_autoregression_steps(autoregression_steps_epochs, epoch):
+    smaller_values = [value for value in autoregression_steps_epochs.keys() if int(value) <= epoch]
+    if not smaller_values:
+        return 1
+
+    return autoregression_steps_epochs[str(max(smaller_values))]
+
+
+def train():
+    with wandb.init() as run:
+        config = run.config
+
+        logger.info('Creating Model')
+        model = FuXi(config)
+        wandb_logger = WandbLogger(id=run.id, resume='allow')
+        wandb_logger.watch(model, log_freq=100)
+        checkpoint_callback = ModelCheckpoint(dirpath="checkpoints", monitor="train_loss")
+        trainer = L.Trainer(
+            accelerator=device,
+            logger=wandb_logger,
+            callbacks=[checkpoint_callback],
+        )
+
+        epochs = 0
+        for item in config.get('autoregression_steps_epochs'):
+            autoregression_steps = item.get('steps')
+            lr = item.get('lr', config.get('init_learning_rate', 1e-5))
+            train_dl, test_dl, lat_weights = create_train_test_datasets(config.get('batch_size', 1), autoregression_steps)
+
+            model.set_autoregression_steps(autoregression_steps)
+            model.set_lr(lr)
+
+            epochs += item.get('epochs')
+            trainer.fit_loop.max_epochs = epochs
+            trainer.fit(
+                model=model,
+                train_dataloaders=train_dl,
+                val_dataloaders=test_dl,
+            )
+            trainer.validate(model=model, dataloaders=test_dl)
+
+        wandb_logger.experiment.unwatch(model)
+
+
+if __name__ == '__main__':
+    wandb.agent(getSweepID(), train)

@@ -10,3 +10,4 @@ matplotlib
 cartopy
 xarray
 ipympl
+lightning
