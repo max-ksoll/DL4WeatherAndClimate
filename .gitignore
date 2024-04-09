@@ -164,6 +164,7 @@ data
 
 model/
 models/
+checkpoints/
 
 .DS_Store
 

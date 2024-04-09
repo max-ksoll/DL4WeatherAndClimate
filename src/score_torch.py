@@ -3,7 +3,7 @@ import torch
 
 def compute_weighted_rmse(forecast, label, lat_weights):
     error = forecast - label
-    rmse = torch.sqrt((error ** 2 * lat_weights).mean([0, 1, 3, 4]))
+    rmse = torch.sqrt((error ** 2 * lat_weights).mean([0, -1]))
     return rmse
 
 
@@ -28,5 +28,5 @@ def compute_weighted_acc(forecast, labels, lat_weights):
 
 def compute_weighted_mae(forecast, labels, lat_weights):
     error = forecast - labels
-    mae = (torch.abs(error) * lat_weights).mean([0, 1, 3, 4])
+    mae = (torch.abs(error) * lat_weights).mean([0, -1])
     return mae
