@@ -98,8 +98,8 @@ def train():
             trainer.fit(
                 model=model,
                 train_dataloaders=train_dl,
+                val_dataloaders=test_dl
             )
-            trainer.validate(model=model, dataloaders=test_dl)
 
         wandb_logger.experiment.unwatch(model)
 
