@@ -17,25 +17,19 @@ def get_sweep():
 def get_parameters_dict():
     parameters_dict = {
         "batch_size": {"value": 1},
-        "learning_rate": {"value": 2.5e-5},
+        "init_learning_rate": {"value": 2.5e-4},
         "model_parameter": {"value": {
-            "channel": 32,
-            "transformer_blocks": 1,
-            "heads": 1
+            "channel": 1024,
+            "transformer_blocks": 8,
+            "heads": 8
         }},
         "autoregression_steps_epochs": {"value": [
-            {'epochs': 10, 'steps': 1},
-            {'epochs': 10, 'steps': 2},
-            {'epochs': 10, 'steps': 3},
-            {'epochs': 10, 'steps': 4},
-            {'epochs': 10, 'steps': 5},
-            {'epochs': 10, 'steps': 6},
-            {'epochs': 10, 'steps': 7},
-            {'epochs': 10, 'steps': 8},
-            {'epochs': 10, 'steps': 9},
-            {'epochs': 10, 'steps': 10},
-            {'epochs': 10, 'steps': 11},
-            {'epochs': 10, 'steps': 12},
+            {'epochs': 1, 'steps': 1},
+            {'epochs': 1, 'steps': 2},
+            {'epochs': 1, 'steps': 4},
+            {'epochs': 1, 'steps': 8, 'lr': 1e-4},
+            {'epochs': 1, 'steps': 12, 'lr': 5e-5},
+            {'epochs': 1, 'steps': 20, 'lr': 1e-5},
         ]}
     }
     return parameters_dict

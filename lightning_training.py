@@ -24,34 +24,40 @@ if torch.backends.mps.is_available():
     device = 'cpu'
 
 
-def create_train_test_datasets(max_autoregression_steps) -> Tuple[DataLoader, DataLoader, torch.Tensor]:
+def create_train_test_datasets(batch_size, max_autoregression_steps) -> Tuple[DataLoader, DataLoader, torch.Tensor]:
     logger.info('Creating Dataset')
     col_names = os.environ.get('COL_NAMES', 'lessig')
     train_ds = ERA5Dataset(
         os.environ.get('DATAFOLDER'),
-        max_autoregression_steps,
-        TimeMode.BEFORE,
-        end_time="2011-11-30T18:00:00",
+        TimeMode.BETWEEN,
+        start_time="2000-01-01T00:00:00",
+        end_time="2021-12-31T18:00:00",
         max_autoregression_steps=max_autoregression_steps,
         zarr_col_names=col_names
     )
     test_ds = ERA5Dataset(
         os.environ.get('DATAFOLDER'),
-        max_autoregression_steps,
         TimeMode.BETWEEN,
-        start_time="2011-12-01T00:00:00",
-        end_time="2011-12-31T18:00:00",
+        start_time="2022-01-01T00:00:00",
+        end_time="2022-12-31T18:00:00",
         max_autoregression_steps=max_autoregression_steps,
         zarr_col_names=col_names
     )
-    loader_params = {'batch_size': None,
-                     'batch_sampler': None,
-                     'shuffle': False,
-                     'num_workers': os.cpu_count() // 2,
-                     'pin_memory': True}
+    train_loader_params = {
+        'batch_size': batch_size,
+        'shuffle': True,
+        'num_workers': os.cpu_count() // 2,
+        'pin_memory': True
+    }
+    val_loader_params = {
+        'batch_size': batch_size,
+        'shuffle': False,
+        'num_workers': os.cpu_count() // 2,
+        'pin_memory': True
+    }
     logger.info('Creating DataLoader')
-    train_dl = DataLoader(train_ds, **loader_params, sampler=None)
-    test_dl = DataLoader(test_ds, **loader_params, sampler=None)
+    train_dl = DataLoader(train_ds, **train_loader_params)
+    test_dl = DataLoader(test_ds, **val_loader_params)
     return train_dl, test_dl, train_ds.get_latitude_weights()
 
 
@@ -71,26 +77,30 @@ def train():
         model = FuXi(config)
         wandb_logger = WandbLogger(id=run.id, resume='allow')
         wandb_logger.watch(model, log_freq=100)
-        checkpoint_callback = ModelCheckpoint(dirpath="checkpoints", monitor="val_loss")
+        checkpoint_callback = ModelCheckpoint(dirpath="checkpoints", monitor="train_loss")
         trainer = L.Trainer(
             accelerator=device,
             logger=wandb_logger,
             callbacks=[checkpoint_callback],
-            # precision="bf16"
         )
 
+        epochs = 0
         for item in config.get('autoregression_steps_epochs'):
             autoregression_steps = item.get('steps')
-            train_dl, test_dl, lat_weights = create_train_test_datasets(autoregression_steps)
+            lr = item.get('lr', config.get('init_learning_rate', 1e-5))
+            train_dl, test_dl, lat_weights = create_train_test_datasets(config.get('batch_size', 1), autoregression_steps)
 
             model.set_autoregression_steps(autoregression_steps)
+            model.set_lr(lr)
 
-            trainer.fit_loop.max_epochs = item.get('epochs')
+            epochs += item.get('epochs')
+            trainer.fit_loop.max_epochs = epochs
             trainer.fit(
                 model=model,
                 train_dataloaders=train_dl,
                 val_dataloaders=test_dl,
             )
+            trainer.validate(model=model, dataloaders=test_dl)
 
         wandb_logger.experiment.unwatch(model)
 

@@ -14,10 +14,13 @@ class FuXi(L.LightningModule):
             121, 240,
             heads=config.get('model_parameter')['heads'],
         )
-        self.lr = config.get("learning_rate")
+        self.lr = config.get("init_learning_rate")
 
     def set_autoregression_steps(self, autoregression_steps):
         self.autoregression_steps = autoregression_steps
+
+    def set_lr(self, lr):
+        self.lr = lr
 
     def training_step(self, batch, batch_idx):
         ts, lat_weights = batch
@@ -30,17 +33,17 @@ class FuXi(L.LightningModule):
         loss, outs = self.model.step(ts, lat_weights, autoregression_steps=self.autoregression_steps, return_out=True)
 
         rmse = compute_weighted_rmse(outs, ts[:, 2:, :, :, :].cpu(), lat_weights.cpu())
-        acc = compute_weighted_acc(outs, ts[:, 2:, :, :, :].cpu(), lat_weights.cpu())
+        # acc = compute_weighted_acc(outs, ts[:, 2:, :, :, :].cpu(), lat_weights.cpu())
         mae = compute_weighted_mae(outs, ts[:, 2:, :, :, :].cpu(), lat_weights.cpu())
         self.log('val_loss', loss)
         self.log('val_rmse', rmse.mean())
-        self.log('val_acc', acc.mean())
+        # self.log('val_acc', acc.mean())
         self.log('val_mae', mae.mean())
 
         return {
             "loss": loss,
             "rmse": rmse,
-            "acc": acc,
+            # "acc": acc,
             "mae": mae
         }
 

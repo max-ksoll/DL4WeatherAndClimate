@@ -1,6 +1,7 @@
 from typing import Tuple, Union
 
 import torch
+from torch.utils.checkpoint import checkpoint
 from torchvision.models.swin_transformer import SwinTransformerBlockV2
 from torch import nn
 import logging
@@ -16,7 +17,6 @@ class FuXi(torch.nn.Module):
     ):
         super(FuXi, self).__init__()
         logger.info("Creating FuXi Model")
-        self.dim = [input_var, lat, long]
         self.space_time_cube_embedding = SpaceTimeCubeEmbedding(input_var, channels)
         self.u_transformer = UTransformer(transformer_block_count, channels, heads)
         self.fc = torch.nn.Sequential(
@@ -45,18 +45,15 @@ class FuXi(torch.nn.Module):
         if autoregression_steps > timeseries.shape[1] - 2:
             raise ValueError('autoregression_steps cant be greater than number of samples')
 
-        if return_out:
-            outputs = []
+        outputs = []
 
         loss = torch.Tensor([0]).to(timeseries.device)
         for step in range(autoregression_steps):
-            cur_input = timeseries[:, step:step + 2, :, :, :]
-            cur_target = timeseries[:, step + 2, :, :, :]
-            out = self.forward(cur_input)
+            out = self.forward(timeseries[:, step:step + 2, :, :, :])
             if return_out:
                 outputs.append(out.detach().cpu())
             out *= lat_weights
-            loss += torch.nn.functional.l1_loss(out, cur_target)
+            loss += torch.nn.functional.l1_loss(out, timeseries[:, step + 2, :, :, :])
 
         if return_out:
             outputs = torch.stack(outputs, 0)
@@ -158,7 +155,8 @@ class UTransformer(torch.nn.Module):
                 num_heads=heads,
                 window_size=window_size,
                 shift_size=[0 if i % 2 == 0 else w // 2 for w in window_size],
-                stochastic_depth_prob=0.2
+                stochastic_depth_prob=0.2,
+                mlp_ratio=4.
             )
             self.attentionblock.append(block)
 
