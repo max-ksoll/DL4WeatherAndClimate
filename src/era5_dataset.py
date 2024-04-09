@@ -84,7 +84,22 @@ class ERA5Dataset(Dataset):
         self.lat_weights = self.get_latitude_weights()[:, None]
 
     def get_latitude_weights(self):
-        return torch.Tensor(np.cos(np.deg2rad(self.sources[self.dim_names[5]])))
+        def _latitude_cell_bounds(x: np.ndarray) -> np.ndarray:
+            pi_over_2 = np.array([np.pi / 2], dtype=x.dtype)
+            return np.concatenate([-pi_over_2, (x[:-1] + x[1:]) / 2, pi_over_2])
+
+        def _cell_area_from_latitude(points: np.ndarray) -> np.ndarray:
+            """Calculate the area overlap as a function of latitude."""
+            bounds = _latitude_cell_bounds(points)
+            upper = bounds[1:]
+            lower = bounds[:-1]
+            # normalized cell area: integral from lower to upper of cos(latitude)
+            return np.sin(upper) - np.sin(lower)
+
+        """Computes latitude/area weights from latitude coordinate of dataset."""
+        weights = _cell_area_from_latitude(np.deg2rad(self.sources[self.dim_names[5]]))
+        weights /= np.mean(weights)
+        return torch.Tensor(weights)
 
     def __len__(self):
         return self.len
