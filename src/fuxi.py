@@ -56,7 +56,7 @@ class FuXi(torch.nn.Module):
             loss += torch.nn.functional.l1_loss(out, timeseries[:, step + 2, :, :, :])
 
         if return_out:
-            outputs = torch.stack(outputs, 0)
+            outputs = torch.stack(outputs, 1)
             return loss, outputs
 
         return loss

@@ -73,8 +73,21 @@ def train():
     with wandb.init() as run:
         config = run.config
 
+        logger.info('Loading Clima Mean')
+        clima_mean_dir = dotenv.dotenv_values().get('CLIMA_MEAN_DIR', "")
+        clima_mean = None
+        if os.path.exists(clima_mean_dir):
+            # Shape (vars x lats x longs)
+            clima_mean = torch.flatten(torch.stack([
+                torch.load(os.path.join(clima_mean_dir, "temperature.pt")),
+                torch.load(os.path.join(clima_mean_dir, "specific_humidity.pt")),
+                torch.load(os.path.join(clima_mean_dir, "u_component_of_wind.pt")),
+                torch.load(os.path.join(clima_mean_dir, "v_component_of_wind.pt")),
+                torch.load(os.path.join(clima_mean_dir, "geopotential.pt"))
+            ], 0), 0, 1)
+
         logger.info('Creating Model')
-        model = FuXi(config)
+        model = FuXi(config, clima_mean)
         wandb_logger = WandbLogger(id=run.id, resume='allow')
         wandb_logger.watch(model, log_freq=100)
         checkpoint_callback = ModelCheckpoint(dirpath="checkpoints", monitor="train_loss")
@@ -88,7 +101,8 @@ def train():
         for item in config.get('autoregression_steps_epochs'):
             autoregression_steps = item.get('steps')
             lr = item.get('lr', config.get('init_learning_rate', 1e-5))
-            train_dl, test_dl, lat_weights = create_train_test_datasets(config.get('batch_size', 1), autoregression_steps)
+            train_dl, test_dl, lat_weights = create_train_test_datasets(config.get('batch_size', 1),
+                                                                        autoregression_steps)
 
             model.set_autoregression_steps(autoregression_steps)
             model.set_lr(lr)
