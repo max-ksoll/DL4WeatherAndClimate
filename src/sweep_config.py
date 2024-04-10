@@ -25,10 +25,16 @@ def get_parameters_dict():
         }},
         "autoregression_steps_epochs": {"value": [
             {'epochs': 1, 'steps': 1},
+            {'epochs': 1, 'steps': 1, 'lr': 1e-4},
+            {'epochs': 1, 'steps': 1, 'lr': 7.5e-5},
+
             {'epochs': 1, 'steps': 2},
-            {'epochs': 1, 'steps': 4},
-            {'epochs': 1, 'steps': 8, 'lr': 1e-4},
-            {'epochs': 1, 'steps': 12, 'lr': 5e-5},
+            {'epochs': 1, 'steps': 2, 'lr': 1e-4},
+            {'epochs': 1, 'steps': 2, 'lr': 7.5e-5},
+
+            {'epochs': 1, 'steps': 4, 'lr': 5e-5},
+            {'epochs': 1, 'steps': 8, 'lr': 1e-5},
+            {'epochs': 1, 'steps': 12, 'lr': 1e-5},
             {'epochs': 1, 'steps': 20, 'lr': 1e-5},
         ]}
     }
