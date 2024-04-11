@@ -20,22 +20,19 @@ def get_parameters_dict():
         "init_learning_rate": {"value": 2.5e-4},
         "model_parameter": {"value": {
             "channel": 1024,
-            "transformer_blocks": 8,
+            "transformer_blocks": 24,
             "heads": 8
         }},
         "autoregression_steps_epochs": {"value": [
-            {'epochs': 1, 'steps': 1},
-            {'epochs': 1, 'steps': 1, 'lr': 1e-4},
-            {'epochs': 1, 'steps': 1, 'lr': 7.5e-5},
+            {'epochs': 3, 'steps': 1},
+            {'epochs': 3, 'steps': 1, 'lr': 1e-4},
+            {'epochs': 3, 'steps': 1, 'lr': 5e-5},
 
-            {'epochs': 1, 'steps': 2},
-            {'epochs': 1, 'steps': 2, 'lr': 1e-4},
-            {'epochs': 1, 'steps': 2, 'lr': 7.5e-5},
+            {'epochs': 3, 'steps': 2},
+            {'epochs': 3, 'steps': 2, 'lr': 1e-4},
+            {'epochs': 3, 'steps': 2, 'lr': 5e-5},
 
-            {'epochs': 1, 'steps': 4, 'lr': 5e-5},
-            {'epochs': 1, 'steps': 8, 'lr': 1e-5},
-            {'epochs': 1, 'steps': 12, 'lr': 1e-5},
-            {'epochs': 1, 'steps': 20, 'lr': 1e-5},
+            {'epochs': 10, 'steps': 4, 'lr': 1e-5},
         ]}
     }
     return parameters_dict

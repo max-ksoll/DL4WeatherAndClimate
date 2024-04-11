@@ -31,15 +31,15 @@ def create_train_test_datasets(batch_size, max_autoregression_steps) -> Tuple[Da
         os.environ.get('DATAFOLDER'),
         TimeMode.BETWEEN,
         start_time="2000-01-01T00:00:00",
-        end_time="2020-12-31T18:00:00",
+        end_time="2019-12-31T18:00:00",
         max_autoregression_steps=max_autoregression_steps,
         zarr_col_names=col_names
     )
     test_ds = ERA5Dataset(
         os.environ.get('DATAFOLDER'),
         TimeMode.BETWEEN,
-        start_time="2021-01-01T00:00:00",
-        end_time="2021-12-31T18:00:00",
+        start_time="2020-01-01T00:00:00",
+        end_time="2020-12-31T18:00:00",
         max_autoregression_steps=max_autoregression_steps,
         zarr_col_names=col_names
     )
@@ -112,7 +112,7 @@ def train():
             trainer.fit(
                 model=model,
                 train_dataloaders=train_dl,
-                val_dataloaders=train_dl
+                val_dataloaders=test_dl
             )
 
         wandb_logger.experiment.unwatch(model)
