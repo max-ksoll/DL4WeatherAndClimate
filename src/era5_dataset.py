@@ -34,8 +34,8 @@ class ERA5Dataset(Dataset):
             [324.80637, 0.029175894, 113.785934, 89.834595, 109541.625]
         )
         self.max_minus_min = self.maxs - self.mins
-        self.mins = self.mins[:, None, None, None]
-        self.max_minus_min = self.max_minus_min[:, None, None, None]
+        self.mins = self.mins[:, None, None]
+        self.max_minus_min = self.max_minus_min[:, None, None]
         self.max_autoregression_steps = max_autoregression_steps + 2
 
         times = np.array(self.sources["time"])
@@ -84,7 +84,8 @@ class ERA5Dataset(Dataset):
         self.lat_weights = self.get_latitude_weights()[:, None]
 
     def get_latitude_weights(self):
-        return torch.Tensor(np.cos(np.deg2rad(self.sources[self.dim_names[5]])))
+        weights = np.cos(np.deg2rad(self.sources[self.dim_names[5]]))
+        return torch.Tensor(weights)
 
     def __len__(self):
         return self.len

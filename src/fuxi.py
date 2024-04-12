@@ -1,7 +1,6 @@
 from typing import Tuple, Union
 
 import torch
-from torch.utils.checkpoint import checkpoint
 from torchvision.models.swin_transformer import SwinTransformerBlockV2
 from torch import nn
 import logging
@@ -56,10 +55,10 @@ class FuXi(torch.nn.Module):
             loss += torch.nn.functional.l1_loss(out, timeseries[:, step + 2, :, :, :])
 
         if return_out:
-            outputs = torch.stack(outputs, 0)
+            outputs = torch.stack(outputs, 1)
             return loss, outputs
 
-        return loss
+        return loss / autoregression_steps
 
 
 class SpaceTimeCubeEmbedding(nn.Module):

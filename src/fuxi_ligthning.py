@@ -2,10 +2,11 @@ import pytorch_lightning as L
 
 from src.fuxi import FuXi as FuXiBase
 from src.score_torch import *
+import torch
 
 
 class FuXi(L.LightningModule):
-    def __init__(self, config):
+    def __init__(self, config, clima_mean):
         super().__init__()
         self.model: FuXiBase = FuXiBase(
             25,
@@ -15,6 +16,7 @@ class FuXi(L.LightningModule):
             heads=config.get('model_parameter')['heads'],
         )
         self.lr = config.get("init_learning_rate")
+        self.CLIMA_MEAN = clima_mean
 
     def set_autoregression_steps(self, autoregression_steps):
         self.autoregression_steps = autoregression_steps
@@ -30,22 +32,28 @@ class FuXi(L.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         ts, lat_weights = batch
+        label = torch.clone(ts[:, 2:, :, :, :])
+
         loss, outs = self.model.step(ts, lat_weights, autoregression_steps=self.autoregression_steps, return_out=True)
-
-        rmse = compute_weighted_rmse(outs, ts[:, 2:, :, :, :].cpu(), lat_weights.cpu())
-        # acc = compute_weighted_acc(outs, ts[:, 2:, :, :, :].cpu(), lat_weights.cpu())
-        mae = compute_weighted_mae(outs, ts[:, 2:, :, :, :].cpu(), lat_weights.cpu())
         self.log('val_loss', loss)
-        self.log('val_rmse', rmse.mean())
-        # self.log('val_acc', acc.mean())
-        self.log('val_mae', mae.mean())
 
-        return {
-            "loss": loss,
-            "rmse": rmse,
-            # "acc": acc,
-            "mae": mae
-        }
+        ret_dict = dict()
+        ret_dict['loss'] = loss
+
+        rmse = compute_weighted_rmse(outs.cpu(), label.cpu(), lat_weights.cpu())
+        self.log('val_rmse', rmse)
+        ret_dict['rmse'] = rmse
+
+        if self.CLIMA_MEAN is not None:
+            acc = compute_weighted_acc(outs.cpu(), label.cpu(), lat_weights.cpu(), self.CLIMA_MEAN)
+            self.log('val_acc', acc)
+            ret_dict['acc'] = acc
+
+        mae = compute_weighted_mae(outs.cpu(), label.cpu(), lat_weights.cpu())
+        self.log('val_mae', mae)
+        ret_dict['mae'] = mae
+
+        return ret_dict
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(

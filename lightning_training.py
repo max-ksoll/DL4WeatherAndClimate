@@ -31,15 +31,15 @@ def create_train_test_datasets(batch_size, max_autoregression_steps) -> Tuple[Da
         os.environ.get('DATAFOLDER'),
         TimeMode.BETWEEN,
         start_time="2000-01-01T00:00:00",
-        end_time="2021-12-31T18:00:00",
+        end_time="2019-12-31T18:00:00",
         max_autoregression_steps=max_autoregression_steps,
         zarr_col_names=col_names
     )
     test_ds = ERA5Dataset(
         os.environ.get('DATAFOLDER'),
         TimeMode.BETWEEN,
-        start_time="2022-01-01T00:00:00",
-        end_time="2022-12-31T18:00:00",
+        start_time="2020-01-01T00:00:00",
+        end_time="2020-12-31T18:00:00",
         max_autoregression_steps=max_autoregression_steps,
         zarr_col_names=col_names
     )
@@ -73,8 +73,21 @@ def train():
     with wandb.init() as run:
         config = run.config
 
+        logger.info('Loading Clima Mean')
+        clima_mean_dir = dotenv.dotenv_values().get('CLIMA_MEAN_DIR', "")
+        clima_mean = None
+        if os.path.exists(clima_mean_dir):
+            # Shape (vars x lats x longs)
+            clima_mean = torch.flatten(torch.stack([
+                torch.load(os.path.join(clima_mean_dir, "temperature.pt")),
+                torch.load(os.path.join(clima_mean_dir, "specific_humidity.pt")),
+                torch.load(os.path.join(clima_mean_dir, "u_component_of_wind.pt")),
+                torch.load(os.path.join(clima_mean_dir, "v_component_of_wind.pt")),
+                torch.load(os.path.join(clima_mean_dir, "geopotential.pt"))
+            ], 0), 0, 1)
+
         logger.info('Creating Model')
-        model = FuXi(config)
+        model = FuXi(config, clima_mean)
         wandb_logger = WandbLogger(id=run.id, resume='allow')
         wandb_logger.watch(model, log_freq=100)
         checkpoint_callback = ModelCheckpoint(dirpath="checkpoints", monitor="train_loss")
@@ -88,7 +101,8 @@ def train():
         for item in config.get('autoregression_steps_epochs'):
             autoregression_steps = item.get('steps')
             lr = item.get('lr', config.get('init_learning_rate', 1e-5))
-            train_dl, test_dl, lat_weights = create_train_test_datasets(config.get('batch_size', 1), autoregression_steps)
+            train_dl, test_dl, lat_weights = create_train_test_datasets(config.get('batch_size', 1),
+                                                                        autoregression_steps)
 
             model.set_autoregression_steps(autoregression_steps)
             model.set_lr(lr)
@@ -98,9 +112,8 @@ def train():
             trainer.fit(
                 model=model,
                 train_dataloaders=train_dl,
-                val_dataloaders=test_dl,
+                val_dataloaders=test_dl
             )
-            trainer.validate(model=model, dataloaders=test_dl)
 
         wandb_logger.experiment.unwatch(model)
 
