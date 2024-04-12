@@ -92,12 +92,7 @@ def train():
         transformer_heads = config.get('model_parameter')['heads']
         lr = config.get("init_learning_rate")
 
-        col_names = os.environ.get('COL_NAMES', 'lessig')
-        vars = 25
-        if col_names != 'lessig':
-            vars = 10
-
-        model = FuXi(vars, channels, transformer_blocks, transformer_heads, lr, clima_mean)
+        model = FuXi(25, channels, transformer_blocks, transformer_heads, lr, clima_mean)
         wandb_logger = WandbLogger(id=run.id, resume='allow')
         wandb_logger.watch(model, log_freq=100)
         checkpoint_callback = ModelCheckpoint(dirpath=os.environ.get('MODEL_DIR', './models'), monitor="train_loss")
