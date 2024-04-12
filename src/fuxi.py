@@ -51,8 +51,7 @@ class FuXi(torch.nn.Module):
             out = self.forward(timeseries[:, step:step + 2, :, :, :])
             if return_out:
                 outputs.append(out.detach().cpu())
-            out *= lat_weights
-            loss += torch.nn.functional.l1_loss(out, timeseries[:, step + 2, :, :, :])
+            loss += torch.nn.functional.l1_loss(out*lat_weights, timeseries[:, step + 2, :, :, :]*lat_weights)
 
         if return_out:
             outputs = torch.stack(outputs, 1)
