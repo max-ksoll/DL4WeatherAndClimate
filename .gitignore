@@ -169,3 +169,5 @@ checkpoints/
 .DS_Store
 
 src/wandb/
+/notebooks/wandb/
+/notebooks/preds.zarr/
