@@ -6,11 +6,11 @@ import torch
 
 
 class FuXi(L.LightningModule):
-    def __init__(self, input_vars, transformer_blocks, transformer_heads, lr, clima_mean):
+    def __init__(self, input_vars, channels, transformer_blocks, transformer_heads, lr, clima_mean):
         super().__init__()
         self.model: FuXiBase = FuXiBase(
-            25,
             input_vars,
+            channels,
             transformer_blocks,
             121, 240,
             heads=transformer_heads,

@@ -74,7 +74,7 @@ class ERA5Dataset(Dataset):
             "gcloud": {
                 "cols": ["temperature", "specific_humidity", "u_component_of_wind", "v_component_of_wind",
                          "geopotential", "latitude"],
-                "slice_idx": [0, 3, 6, 9, 12],
+                "slice_idx": [7, 10],
                 "permutation": [0, 1, 3, 2]
             }
         }
