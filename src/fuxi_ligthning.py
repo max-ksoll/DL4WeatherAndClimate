@@ -6,17 +6,18 @@ import torch
 
 
 class FuXi(L.LightningModule):
-    def __init__(self, config, clima_mean):
+    def __init__(self, input_vars, transformer_blocks, transformer_heads, lr, clima_mean):
         super().__init__()
         self.model: FuXiBase = FuXiBase(
             25,
-            config.get('model_parameter')['channel'],
-            config.get('model_parameter')['transformer_blocks'],
+            input_vars,
+            transformer_blocks,
             121, 240,
-            heads=config.get('model_parameter')['heads'],
+            heads=transformer_heads,
         )
-        self.lr = config.get("init_learning_rate")
+        self.lr = lr
         self.CLIMA_MEAN = clima_mean
+        self.save_hyperparameters()
 
     def set_autoregression_steps(self, autoregression_steps):
         self.autoregression_steps = autoregression_steps

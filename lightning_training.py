@@ -87,10 +87,15 @@ def train():
             ], 0), 0, 1)
 
         logger.info('Creating Model')
-        model = FuXi(config, clima_mean)
+        input_vars = config.get('model_parameter')['channel']
+        transformer_blocks = config.get('model_parameter')['transformer_blocks']
+        transformer_heads = config.get('model_parameter')['heads']
+        lr = config.get("init_learning_rate")
+
+        model = FuXi(input_vars, transformer_blocks, transformer_heads, lr, clima_mean)
         wandb_logger = WandbLogger(id=run.id, resume='allow')
         wandb_logger.watch(model, log_freq=100)
-        checkpoint_callback = ModelCheckpoint(dirpath="checkpoints", monitor="train_loss")
+        checkpoint_callback = ModelCheckpoint(dirpath=os.environ.get('MODEL_DIR', './models'), monitor="train_loss")
         trainer = L.Trainer(
             accelerator=device,
             logger=wandb_logger,
