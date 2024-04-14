@@ -11,3 +11,4 @@ cartopy
 xarray
 ipympl
 lightning
+git+https://github.com/google-research/weatherbench2.git
