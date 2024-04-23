@@ -24,10 +24,10 @@ def get_parameters_dict():
             "heads": 8
         }},
         "autoregression_steps_epochs": {"value": [
-            {'epochs': 4, 'steps': 1},
-            {'epochs': 4, 'steps': 2},
-            {'epochs': 2, 'steps': 4, 'lr': 1e-5},
-            {'epochs': 2, 'steps': 12, 'lr': 1e-6},
+            {'epochs': 5, 'steps': 1},
+            {'epochs': 5, 'steps': 2},
+            {'epochs': 4, 'steps': 4, 'lr': 1e-5},
+            {'epochs': 10, 'steps': 12, 'lr': 1e-6},
         ]}
     }
     return parameters_dict
