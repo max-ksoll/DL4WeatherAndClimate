@@ -30,7 +30,7 @@ def create_train_test_datasets(batch_size, max_autoregression_steps) -> Tuple[Da
     train_ds = ERA5Dataset(
         os.environ.get('DATAFOLDER'),
         TimeMode.BETWEEN,
-        start_time="1990-01-01T00:00:00",
+        start_time="2018-01-01T00:00:00",
         end_time="2019-12-31T18:00:00",
         max_autoregression_steps=max_autoregression_steps,
         zarr_col_names=col_names
