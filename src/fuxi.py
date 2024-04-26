@@ -47,12 +47,9 @@ class FuXi(torch.nn.Module):
         outputs = []
 
         loss = torch.Tensor([0]).to(timeseries.device)
-        inital_input = timeseries[:, 0:2, :, :, :]
+        model_input = timeseries[:, 0:2, :, :, :]
         for step in range(autoregression_steps):
-            if step == 0:
-                model_input = inital_input
-            else:
-                del inital_input
+            if step > 0:
                 model_input = torch.stack([model_input[:, 1, :, :, :], out], dim=1)
             out = self.forward(model_input)
             if return_out:
