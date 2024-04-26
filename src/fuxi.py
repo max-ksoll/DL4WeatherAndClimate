@@ -52,6 +52,7 @@ class FuXi(torch.nn.Module):
             if step == 0:
                 model_input = inital_input
             else:
+                del inital_input
                 model_input = torch.stack([model_input[:, 1, :, :, :], out], dim=1)
             out = self.forward(model_input)
             if return_out:
