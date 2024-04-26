@@ -19,8 +19,8 @@ class ERA5Dataset(Dataset):
     def __init__(self, path_file,
                  time_mode: TimeMode,
                  max_autoregression_steps=1,
-                 start_time="2011-01-01T00:00:00",
-                 end_time="2011-12-31T18:00:00",
+                 start_time="2011-01-01-01T00:00:00",
+                 end_time="2011-01-12-31T18:00:00",
                  zarr_col_names="lessig"):
         super(ERA5Dataset, self).__init__()
 

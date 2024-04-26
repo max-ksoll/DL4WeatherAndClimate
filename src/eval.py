@@ -35,7 +35,7 @@ def evaluate(model_path, compute_metrik=True):
         os.environ.get('DATAFOLDER'),
         1,
         TimeMode.AFTER,
-        start_time="2011-12-28T23:59:59",
+        start_time="2011-01-12-28T23:59:59",
         max_autoregression_steps=1
     )
     lat_weights = test_ds.get_latitude_weights()

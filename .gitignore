@@ -171,3 +171,4 @@ checkpoints/
 src/wandb/
 /notebooks/wandb/
 /notebooks/preds.zarr/
+figures
