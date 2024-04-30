@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import torch
 import zarr
+import xarray as xr
 from torch.utils.data import Dataset
 
 
@@ -19,13 +20,17 @@ class ERA5Dataset(Dataset):
     def __init__(self, path_file,
                  time_mode: TimeMode,
                  max_autoregression_steps=1,
-                 start_time="2011-01-01T00:00:00",
-                 end_time="2011-12-31T18:00:00",
-                 zarr_col_names="lessig"):
+                 start_time="2011-01-01-01T00:00:00",
+                 end_time="2011-01-12-31T18:00:00",
+                 zarr_col_names="lessig",
+                 use_xarray=False,
+                 ds=None):
         super(ERA5Dataset, self).__init__()
-
-        store = zarr.DirectoryStore(path_file)
-        self.sources = zarr.group(store=store)
+        if not use_xarray:
+            store = zarr.DirectoryStore(path_file)
+            self.sources = zarr.group(store=store)
+        else:
+            self.sources = ds
 
         self.mins = torch.Tensor(
             [193.48901, -3.3835982e-05, -65.45247, -96.98215, -6838.8906]
@@ -84,7 +89,7 @@ class ERA5Dataset(Dataset):
         self.lat_weights = self.get_latitude_weights()[:, None]
 
     def get_latitude_weights(self):
-        weights = np.cos(np.deg2rad(self.sources[self.dim_names[5]]))
+        weights = np.cos(np.deg2rad(np.array(self.sources[self.dim_names[5]])))
         return torch.Tensor(weights)
 
     def __len__(self):
@@ -102,10 +107,10 @@ class ERA5Dataset(Dataset):
 
     def get_at_idx(self, idx_t):
         stack = torch.stack([
-            torch.tensor(self.sources[self.dim_names[0]][idx_t]),
-            torch.tensor(self.sources[self.dim_names[1]][idx_t]),
-            torch.tensor(self.sources[self.dim_names[2]][idx_t]),
-            torch.tensor(self.sources[self.dim_names[3]][idx_t]),
-            torch.tensor(self.sources[self.dim_names[4]][idx_t]),
+            torch.tensor(np.array(self.sources[self.dim_names[0]][idx_t])),
+            torch.tensor(np.array(self.sources[self.dim_names[1]][idx_t])),
+            torch.tensor(np.array(self.sources[self.dim_names[2]][idx_t])),
+            torch.tensor(np.array(self.sources[self.dim_names[3]][idx_t])),
+            torch.tensor(np.array(self.sources[self.dim_names[4]][idx_t])),
         ], 1, )
         return torch.permute(stack[self.slice_idx, :, :, :], self.permutation)

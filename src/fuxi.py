@@ -47,11 +47,14 @@ class FuXi(torch.nn.Module):
         outputs = []
 
         loss = torch.Tensor([0]).to(timeseries.device)
+        model_input = timeseries[:, 0:2, :, :, :]
         for step in range(autoregression_steps):
-            out = self.forward(timeseries[:, step:step + 2, :, :, :])
+            if step > 0:
+                model_input = torch.stack([model_input[:, 1, :, :, :], out], dim=1)
+            out = self.forward(model_input)
             if return_out:
                 outputs.append(out.detach().cpu())
-            loss += torch.nn.functional.l1_loss(out*lat_weights, timeseries[:, step + 2, :, :, :]*lat_weights)
+            loss += torch.nn.functional.l1_loss(out * lat_weights, timeseries[:, step + 2, :, :, :] * lat_weights)
 
         if return_out:
             outputs = torch.stack(outputs, 1)
@@ -154,7 +157,9 @@ class UTransformer(torch.nn.Module):
                 window_size=window_size,
                 shift_size=[0 if i % 2 == 0 else w // 2 for w in window_size],
                 stochastic_depth_prob=0.2,
-                mlp_ratio=4.
+                mlp_ratio=4.,
+                dropout=0.05,
+                attention_dropout=0.05
             )
             self.attentionblock.append(block)
 

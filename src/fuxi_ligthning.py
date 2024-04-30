@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytorch_lightning as L
 
 from src.fuxi import FuXi as FuXiBase
@@ -24,6 +26,12 @@ class FuXi(L.LightningModule):
 
     def set_lr(self, lr):
         self.lr = lr
+
+    def forward(self, *args: Any, **kwargs: Any) -> Any:
+        ts = args[0][0]
+        lat_weights = args[0][1]
+        loss, out = self.model.step(ts, lat_weights, autoregression_steps=self.autoregression_steps, return_out=True)
+        return out
 
     def training_step(self, batch, batch_idx):
         ts, lat_weights = batch
