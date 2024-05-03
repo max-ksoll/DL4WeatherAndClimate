@@ -5,7 +5,7 @@ from typing import Tuple
 import dotenv
 import pytorch_lightning as L
 import torch
-from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks import ModelCheckpoint, StochasticWeightAveraging
 from pytorch_lightning.loggers import WandbLogger
 from torch.utils.data import DataLoader
 
@@ -30,7 +30,7 @@ def create_train_test_datasets(batch_size, max_autoregression_steps) -> Tuple[Da
     train_ds = ERA5Dataset(
         os.environ.get('DATAFOLDER'),
         TimeMode.BETWEEN,
-        start_time="2000-01-01T00:00:00",
+        start_time="1979-01-01T00:00:00",
         end_time="2019-12-31T18:00:00",
         max_autoregression_steps=max_autoregression_steps,
         zarr_col_names=col_names
@@ -101,18 +101,18 @@ def train():
         trainer = L.Trainer(
             accelerator=device,
             logger=wandb_logger,
-            callbacks=[checkpoint_callback],
+            callbacks=[checkpoint_callback,
+                       StochasticWeightAveraging(swa_lrs=1e-2)],
+            gradient_clip_val=0.5
         )
 
         epochs = 0
         for item in config.get('autoregression_steps_epochs'):
             autoregression_steps = item.get('steps')
-            lr = item.get('lr', config.get('init_learning_rate', 1e-5))
             train_dl, test_dl, lat_weights = create_train_test_datasets(config.get('batch_size', 1),
                                                                         autoregression_steps)
 
             model.set_autoregression_steps(autoregression_steps)
-            model.set_lr(lr)
 
             epochs += item.get('epochs')
             trainer.fit_loop.max_epochs = epochs

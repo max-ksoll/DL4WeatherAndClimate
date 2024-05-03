@@ -19,6 +19,7 @@ class FuXi(L.LightningModule):
         )
         self.lr = lr
         self.CLIMA_MEAN = clima_mean
+        self.autoregression_steps = 1
         self.save_hyperparameters()
 
     def set_autoregression_steps(self, autoregression_steps):
@@ -71,4 +72,10 @@ class FuXi(L.LightningModule):
             betas=(0.9, 0.95),
             weight_decay=0.1
         )
-        return optimizer
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            optimizer,
+            T_0=2,
+            T_mult=2,
+            eta_min=1e-7,
+        )
+        return [optimizer], [{"scheduler": scheduler, "interval": "epoch"}]
